@@ -66,7 +66,7 @@ module PrivacyHunter
       plist_data = `echo '#{json_data}' | plutil -convert xml1 - -o -`
 
       # 创建临时文件
-      temp_plist = File.join(cache_privacy_fold,"#{PrivacyUtils.to_md5(privacy_path)}.plist")
+      temp_plist = File.join(PrivacyUtils.cache_privacy_fold,"#{PrivacyUtils.to_md5(privacy_path)}.plist")
       File.write(temp_plist, plist_data)
 
       # 获取原先文件中的 NSPrivacyAccessedAPITypes 数据
@@ -99,34 +99,30 @@ module PrivacyHunter
 
     private
 
-    def self.cache_privacy_fold
-      # 本地缓存目录
-      cache_directory = File.expand_path('~/.cache')
-      
-      # 目标文件夹路径
-      target_directory = File.join(cache_directory, 'cocoapods-privacy', 'privacy')
-
-      # 如果文件夹不存在，则创建
-      Dir.mkdir(target_directory) unless Dir.exist?(target_directory)
-
-      target_directory
-    end
 
     def self.fetch_template_plist_file
-      file_url = 'https://ios.file.babybus.co/Shell/privacy/NSPrivacyAccessedAPITypes.plist'
+
+      unless File.exist?(PrivacyUtils.cache_config_file)
+        raise Informative, "无配置文件，run `pod privacy config config_file' 进行配置"
+      end
+  
+      template_url = Privacy::Config.instance.api_template_url
+      unless template_url && !template_url.empty?
+        raise Informative, "配置文件中无 `api.template.url` 配置，请补全后再更新配置 `pod privacy config config_file` "
+      end
 
       # 目标文件路径
-      local_file_path = File.join(cache_privacy_fold, 'NSPrivacyAccessedAPITypes.plist')
+      local_file_path = File.join(PrivacyUtils.cache_privacy_fold, 'NSPrivacyAccessedAPITypes.plist')
       
       # 获取远程文件更新时间
-      remote_file_time = remoteFileTime?(file_url)
+      remote_file_time = remoteFileTime?(template_url)
 
       # 判断本地文件的最后修改时间是否与远端文件一致，如果一致则不进行下载
       if File.exist?(local_file_path) && file_identical?(local_file_path, remote_file_time)
         puts "本地文件与远端文件一致，无需下载。文件路径: #{local_file_path}"
       else
         # 使用 curl 下载文件
-        system("curl -o #{local_file_path} #{file_url}")
+        system("curl -o #{local_file_path} #{template_url}")
         puts "文件已下载到: #{local_file_path}"
 
         # 同步远程文件时间到本地文件

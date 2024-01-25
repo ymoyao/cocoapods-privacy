@@ -54,6 +54,23 @@ module PrivacyUtils
       md5.hexdigest
     end
 
+    def self.cache_privacy_fold
+      # 本地缓存目录
+      cache_directory = File.expand_path('~/.cache')
+      
+      # 目标文件夹路径
+      target_directory = File.join(cache_directory, 'cocoapods-privacy', 'privacy')
+
+      # 如果文件夹不存在，则创建
+      FileUtils.mkdir_p(target_directory) unless Dir.exist?(target_directory)
+
+      target_directory
+    end
+
+    def self.cache_config_file
+      config_file = File.join(cache_privacy_fold, 'config.json')
+    end
+
     # 创建默认隐私协议文件
     def self.create_privacy_if_empty(file_path) 
       # 文件内容

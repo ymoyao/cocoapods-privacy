@@ -54,13 +54,13 @@ module Pod
         def install!
         privacy_origin_install!()
  
-        if !(Pod::Config.instance.bb_is_privacy || !Pod::Config.instance.bb_privacy_folds.empty?)
+        if !(Pod::Config.instance.is_privacy || !Pod::Config.instance.privacy_folds.empty?)
           return
         end
 
         # 过滤出宝宝巴士自身组件 && 自身没有隐私协议文件的spec
         bb_modules = @analysis_result.specifications.select { 
-          |obj| obj.is_bb_module && !obj.has_privacy
+          |obj| obj.is_need_search_module && !obj.has_privacy
         }
         
         # 存储本地调试组件
@@ -90,10 +90,11 @@ module Pod
             end
         }.compact
        
-        # 拼接本地调试和远端的pod目录 (并去重)
-        bb_pod_folds += bb_development_folds
-        bb_pod_folds << PrivacyUtils.project_code_fold
-        bb_pod_folds = bb_pod_folds.uniq
+        
+        bb_pod_folds += bb_development_folds # 拼接本地调试和远端的pod目录 
+        bb_pod_folds << PrivacyUtils.project_code_fold # 拼接工程同名主目录
+        bb_pod_folds += Pod::Config.instance.privacy_folds # 拼接外部传入的指定目录
+        bb_pod_folds = bb_pod_folds.uniq # 去重
 
         # 在工程 在对应位置创建隐私文件
         privacy_path = PrivacyModule.load(true).first
