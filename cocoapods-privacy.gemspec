@@ -7,10 +7,10 @@ Gem::Specification.new do |spec|
   spec.name          = 'cocoapods-privacy'
   spec.version       = CocoapodsPrivacy::VERSION
   spec.authors       = ['youhui']
-  spec.email         = ['youhui@babybus.com']
+  spec.email         = ['developer_yh@163.com']
   spec.description   = %q{A short description of cocoapods-privacy.}
   spec.summary       = %q{A longer description of cocoapods-privacy.}
-  spec.homepage      = 'https://github.com/EXAMPLE/cocoapods-privacy'
+  spec.homepage      = 'https://github.com/ymoyao/cocoapods-privacy'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files`.split($/)
