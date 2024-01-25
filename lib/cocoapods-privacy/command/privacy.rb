@@ -18,26 +18,23 @@ module Pod
     #       in the `plugins.json` file, once your plugin is released.
     #
     class Privacy < Command
-      self.summary = 'Short description of cocoapods-privacy.'
+      self.summary = '隐私清单'
 
       self.description = <<-DESC
-        Longer description of cocoapods-privacy.
+        1、生成默认的隐私清单文件 2、检索代码生成隐私api定义（不包括隐私权限）
       DESC
 
-      self.arguments = 'NAME'
+      self.arguments = [
+        CLAide::Argument.new('folds', false, true),
+      ]
 
       def initialize(argv)
-        @name = argv.shift_argument
+        @folds = argv.arguments!
         super
-      end
-
-      def validate!
-        super
-        help! 'A Pod name is required.' unless @name
       end
 
       def run
-        UI.puts "Add your implementation for the cocoapods-privacy plugin in #{__FILE__}"
+        PrivacyModule.load()
       end
     end
   end
