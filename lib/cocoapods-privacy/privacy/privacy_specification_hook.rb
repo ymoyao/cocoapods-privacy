@@ -16,13 +16,23 @@ module Pod
             resource_bundle && resource_bundle.to_s.include?('PrivacyInfo.xcprivacy')
         end
 
-        # 是否为宝宝巴士组件
-        def is_bb_module
-            #查找source(可能是subspec)
-             git_source = recursive_git_source(self)
+        # 是否为需要检索组件
+        def is_need_search_module
+            unless File.exist?(PrivacyUtils.cache_config_file)
+                raise Informative, "无配置文件，run `pod privacy config config_file` 进行配置"
+            end
 
-            # 域名为babybus服务器，且非镜像同步，则判断为自身服务器
-            git_source ? (git_source.include?("git.babybus.co") && !git_source.include?("GitMirrors")) : false
+            #查找source(可能是subspec)
+            git_source = recursive_git_source(self)
+            unless git_source
+                return false
+            end
+
+            # 判断域名白名单 和 黑名单，确保该组件是自己的组件，第三方sdk不做检索
+            config = Privacy::Config.instance          
+            git_source_whitelisted = config.source_white_list.any? { |item| git_source.include?(item) }
+            git_source_blacklisted = config.source_black_list.any? { |item| git_source.include?(item) }
+            git_source_whitelisted && !git_source_blacklisted
         end
 
         # 返回resource_bundles
@@ -39,24 +49,5 @@ module Pod
                 recursive_git_source(spec.instance_variable_get(:@parent))
             end
         end
-
-        # 测试代码
-        # alias_method :origin_hash,:hash
-        # def hash
-        #     puts "模块：#{module_name}  #{is_bb_module() ? '是' : '不是'}宝宝巴士组件"
-        #     origin_hash()
-        # end
     end
 end
-
-# module Pod
-#     class Specification
-#         module DSL
-#             module RootAttributesAccessors
-#                 def is_bb_module
-#                     source[:git].include?("git.babybus.co")
-#                 end
-#             end
-#         end
-#     end
-# end
