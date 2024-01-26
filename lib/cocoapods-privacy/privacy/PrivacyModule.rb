@@ -33,7 +33,6 @@ class BBSpec
 
   def initialize(name,alias_name,full_name)
     @rows = []
-    @child_specs = []
     @privacy_sources = []
     @name = name
     @alias_name = alias_name
@@ -41,7 +40,7 @@ class BBSpec
     @privacy_file = "Pod/Privacy/#{full_name}/PrivacyInfo.xcprivacy"
   end
 
-  def privacy_handle
+  def privacy_handle(podspec_file_path)
     @rows.each_with_index do |line, index|
       if !line || line.is_a?(BBSpec) || !line.key || line.key.empty? 
         next
@@ -64,19 +63,19 @@ class BBSpec
           end
         
           @privacy_sources = source_files_array.map do |file_path|
-            File.join(PrivacyUtils.podspec_fold_path, file_path.strip)
+            File.join(File.dirname(podspec_file_path), file_path.strip)
           end
         end
       end
     end
-    create_privacy_file_if_need()
+    create_privacy_file_if_need(podspec_file_path)
     modify_privacy_resource_bundle_if_need()
   end
 
   # 对应Spec新增隐私文件
-  def create_privacy_file_if_need
+  def create_privacy_file_if_need(podspec_file_path)
     if !@privacy_sources.empty?
-      PrivacyUtils.create_privacy_if_empty(File.join(PrivacyUtils.podspec_fold_path, @privacy_file))
+      PrivacyUtils.create_privacy_if_empty(File.join(File.dirname(podspec_file_path), @privacy_file))
     end
   end
 
@@ -120,16 +119,18 @@ module PrivacyModule
     project_path = PrivacyUtils.project_path()
     resources_folder_path = File.join(File.basename(project_path, File.extname(project_path)),'Resources')
     privacy_file_path = File.join(resources_folder_path,PrivacyUtils.privacy_name)
-
-    # 如果没有隐私文件，那么新建一个添加到工程中
-    # 打开 Xcode 项目，在Resources 下创建
-    project = Xcodeproj::Project.open(project_path)
-    main_group = project.main_group
-    resources_group = main_group.find_subpath('Resources', true)
-
     # 如果隐私文件不存在，创建隐私协议模版
     unless File.exist?(privacy_file_path) 
       PrivacyUtils.create_privacy_if_empty(privacy_file_path)
+    end
+    
+    # 如果没有隐私文件，那么新建一个添加到工程中
+    # 打开 Xcode 项目，在Resources 下创建
+    project = Xcodeproj::Project.open(File.basename(project_path))
+    main_group = project.main_group
+    resources_group = PrivacyUtils.find_group_by_path(main_group,resources_folder_path)
+    if resources_group.nil?
+      resources_group = main_group.new_group('Resources',resources_folder_path)
     end
 
     # 如果不存在引用，创建新的引入xcode引用
@@ -148,8 +149,13 @@ module PrivacyModule
   end
 
   # 处理组件
-  def self.load_module
-    privacy_hash = PrivacyModule.check(PrivacyUtils.podspec_file_path)
+  def self.load_module(podspec_file)
+    podspec_file_path = podspec_file ? podspec_file : PrivacyUtils.podspec_file_path
+    unless podspec_file_path && !podspec_file_path.empty?
+      raise Informative, "no podspec file were found, please run `pod privacy podspec_file_path`"               
+    end
+
+    privacy_hash = PrivacyModule.check(podspec_file_path)
     privacy_hash.each do |privacy_file_path, source_files|
       data = PrivacyHunter.search_pricacy_apis(source_files)
       PrivacyHunter.write_to_privacy(data,privacy_file_path) unless data.empty?
@@ -166,8 +172,7 @@ module PrivacyModule
       # Step 3.1:如果Row 是属于Spec 内，那么聚拢成BBSpec，
       # Step 3.2:BBSpec 内使用数组存储其Spec 内的行
       # Step 3.3 在合适位置给每个有效的spec都创建一个 隐私模版，并修改其podspec 引用
-      default_name = File.basename(podspec_file_path, File.extname(podspec_file_path))
-      combin_sepcs_and_rows = combin_sepc_if_need(rows,default_name)
+      combin_sepcs_and_rows = combin_sepc_if_need(rows,podspec_file_path)
 
       # Step 4: 展开修改后的Spec,重新转换成 BBRow
       rows = unfold_sepc_if_need(combin_sepcs_and_rows)
@@ -182,7 +187,7 @@ module PrivacyModule
 
      
       # Step 6: 获取privacy 相关信息，传递给后续处理
-      privacy_hash = fetch_privacy_hash(combin_sepcs_and_rows)
+      privacy_hash = fetch_privacy_hash(combin_sepcs_and_rows,podspec_file_path)
       filtered_privacy_hash = privacy_hash.reject { |_, value| value.empty? }
       filtered_privacy_hash
   end
@@ -227,10 +232,11 @@ module PrivacyModule
   #   ......  
   # ]
   # 合并Row -> Spec（会存在部分行不在Spec中：Spec new 之前的注释）
-  def self.combin_sepc_if_need(rows,default_name) 
+  def self.combin_sepc_if_need(rows,podspec_file_path) 
     spec_stack = []
     result_rows = []
-  
+    default_name = File.basename(podspec_file_path, File.extname(podspec_file_path))
+
     rows.each do |row|
       if row.is_spec_start 
         # 创建 spec
@@ -250,7 +256,7 @@ module PrivacyModule
         spec_stack.last&.rows << row
 
         #执行隐私协议修改
-        spec_stack.last.privacy_handle()
+        spec_stack.last.privacy_handle(podspec_file_path)
 
         # spec 出栈
         spec_stack.pop
@@ -277,12 +283,12 @@ module PrivacyModule
   end
 
 
-  def self.fetch_privacy_hash(rows)
+  def self.fetch_privacy_hash(rows,podspec_file_path)
     privacy_hash = {}
     filtered_rows = rows.select { |row| row.is_a?(BBSpec) }
     filtered_rows.each do |spec|
-      privacy_hash[File.join(PrivacyUtils.podspec_fold_path,spec.privacy_file)] = spec.privacy_sources
-      privacy_hash.merge!(fetch_privacy_hash(spec.rows))
+      privacy_hash[File.join(File.dirname(podspec_file_path),spec.privacy_file)] = spec.privacy_sources
+      privacy_hash.merge!(fetch_privacy_hash(spec.rows,podspec_file_path))
     end
     privacy_hash
   end

@@ -8,20 +8,14 @@ module PrivacyUtils
     
     # 通过是否包含podspec 来判断是否为主工程
     def self.isMainProject
-      podspec_file_path.empty?
+      !(podspec_file_path && !podspec_file_path.empty)
     end
 
     # 查找podspec
     def self.podspec_file_path
-      base_path = File.expand_path('..', Pathname.pwd) 
-      matching_files = Dir[File.join(base_path, '**/*.podspec')].uniq
+      base_path = Pathname.pwd
+      matching_files = Dir.glob(File.join(base_path, '*.podspec'))
       matching_files.first
-    end
-
-    # 查找podspec 所在文件夹
-    def self.podspec_fold_path
-      podspec_folder = File.dirname(podspec_file_path) if podspec_file_path
-      podspec_folder
     end
 
     # xcode工程地址
@@ -111,6 +105,20 @@ module PrivacyUtils
      end 
      return false
    end
-   
-      # project_root = Pod::Config.instance.project_pods_root
+
+   # 查询group 中是否有执行路径的子group
+   def self.find_group_by_path(group,path)
+     result = nil
+     sub_group = group.children
+     if sub_group && !sub_group.empty?
+       sub_group.each do |item|
+         if item.path == path
+           result = item
+           break
+         end
+       end
+     end
+     result
+   end
+
 end

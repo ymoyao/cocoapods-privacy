@@ -52,12 +52,12 @@ module Pod
 
 
     # 直接执行 pod privacy 时调用
-    def privacy_analysis
+    def privacy_analysis(custom_folds)
       prepare
       resolve_dependencies
       clean_sandbox
 
-      privacy_handle()
+      privacy_handle(custom_folds)
     end
 
     # hook pod install 命令
@@ -69,11 +69,11 @@ module Pod
           return
         end
 
-        privacy_handle()
+        privacy_handle(Pod::Config.instance.privacy_folds)
     end
 
 
-    def privacy_handle
+    def privacy_handle(custom_folds)
       # 过滤出自身组件 && 自身没有隐私协议文件的spec
       modules = @analysis_result.specifications.select { 
         |obj| obj.is_need_search_module && !obj.has_privacy
@@ -108,12 +108,16 @@ module Pod
     
       
       pod_folds += development_folds # 拼接本地调试和远端的pod目录 
-      pod_folds << PrivacyUtils.project_code_fold # 拼接工程同名主目录
-      pod_folds += Pod::Config.instance.privacy_folds # 拼接外部传入的指定目录
+      pod_folds += [PrivacyUtils.project_code_fold].compact # 拼接工程同名主目录
+      pod_folds += custom_folds || [] # 拼接外部传入的自定义目录
       pod_folds = pod_folds.uniq # 去重
 
-      # 处理工程隐私协议
-      PrivacyModule.load_project(pod_folds)
+      if pod_folds.empty?
+        puts "无组件或工程目录, 请检查工程"
+      else
+        # 处理工程隐私协议
+        PrivacyModule.load_project(pod_folds)
+      end
     end
   end
 end

@@ -1,51 +1,20 @@
 module Pod
   class Command
-    # This is an example of a cocoapods plugin adding a top-level subcommand
-    # to the 'pod' command.
-    #
-    # You can also create subcommands of existing or new commands. Say you
-    # wanted to add a subcommand to `list` to show newly deprecated pods,
-    # (e.g. `pod list deprecated`), there are a few things that would need
-    # to change.
-    #
-    # - move this file to `lib/pod/command/list/deprecated.rb` and update
-    #   the class to exist in the the Pod::Command::List namespace
-    # - change this class to extend from `List` instead of `Command`. This
-    #   tells the plugin system that it is a subcommand of `list`.
-    # - edit `lib/cocoapods_plugins.rb` to require this file
-    #
-    # @todo Create a PR to add your plugin to CocoaPods/cocoapods.org
-    #       in the `plugins.json` file, once your plugin is released.
-    #
     class Privacy < Command
-      self.summary = '隐私清单'
-
-      self.description = <<-DESC
-        1、生成默认的隐私清单文件 2、检索代码生成隐私api定义（不包括隐私权限）
-      DESC
-
-      self.arguments = [
-        CLAide::Argument.new('folds', false, true),
-      ]
 
       def initialize(argv)
-        @folds = argv.arguments!
         super
       end
 
       def run
-        if PrivacyUtils.isMainProject()
-          # 单独执行install 分析步骤
-          installer = installer_for_config
-          installer.repo_update = false
-          installer.update = false
-          installer.deployment = false
-          installer.clean_install = false
-          installer.privacy_analysis()
+        if PrivacyUtils.isMainProject
+          puts "检测到#{PrivacyUtils.project_path || ""}工程文件， 请使用 pod privacy install 对工程进行隐私清单创建和自动检索"
+        elsif PrivacyUtils.podspec_file_path
+          puts "检测到#{PrivacyUtils.podspec_file_path || ""} 组件， 请使用 pod privacy spec 对组件进行隐私清单创建和自动检索"
         else
-          PrivacyModule.load_module()
+          puts "未检测到工程或podspec 文件， 请切换到工程或podspec文件目录下再次执行命令"
         end
-      end
+      end      
     end
   end
 end
