@@ -50,6 +50,17 @@ module Pod
     autoload :ProjectCache,                 'cocoapods/installer/project_cache/project_cache'
     autoload :TargetUUIDGenerator,          'cocoapods/installer/target_uuid_generator'
 
+
+    # 直接执行 pod privacy 时调用
+    def privacy_analysis
+      prepare
+      resolve_dependencies
+      clean_sandbox
+
+      privacy_handle()
+    end
+
+    # hook pod install 命令
     alias_method :privacy_origin_install!, :install!
         def install!
         privacy_origin_install!()
@@ -58,53 +69,51 @@ module Pod
           return
         end
 
-        # 过滤出宝宝巴士自身组件 && 自身没有隐私协议文件的spec
-        bb_modules = @analysis_result.specifications.select { 
-          |obj| obj.is_need_search_module && !obj.has_privacy
-        }
-        
-        # 存储本地调试组件
-        bb_development_folds = []
-
-        # 获取组件所在工程的pods 目录
-        bb_pod_folds = bb_modules.map{ |spec|
-            name = spec.name.split('/').first
-            fold = File.join(@sandbox.root,name)
-            if Dir.exist?(fold)
-              fold
-            else
-              development_pods = @sandbox.development_pods
-              if name && development_pods
-                podspec_file_path = development_pods[name]
-                if podspec_file_path && !podspec_file_path.empty? 
-                  podspec_fold_path = File.dirname(podspec_file_path)
-                  source_files = spec.attributes_hash['source_files']
-                  if source_files && !source_files.empty?
-                    source_files.each do |file|
-                      bb_development_folds << File.join(podspec_fold_path,file)
-                    end
-                  end
-                end
-              end
-              nil
-            end
-        }.compact
-       
-        
-        bb_pod_folds += bb_development_folds # 拼接本地调试和远端的pod目录 
-        bb_pod_folds << PrivacyUtils.project_code_fold # 拼接工程同名主目录
-        bb_pod_folds += Pod::Config.instance.privacy_folds # 拼接外部传入的指定目录
-        bb_pod_folds = bb_pod_folds.uniq # 去重
-
-        # 在工程 在对应位置创建隐私文件
-        privacy_path = PrivacyModule.load(true).first
-
-        # 开始检索api,并返回json 字符串数据
-        json_data = PrivacyHunter.search_pricacy_apis(bb_pod_folds)
-
-        # 将数据写入隐私清单文件
-        PrivacyHunter.write_to_privacy(json_data,privacy_path)
+        privacy_handle()
     end
 
+
+    def privacy_handle
+      # 过滤出自身组件 && 自身没有隐私协议文件的spec
+      modules = @analysis_result.specifications.select { 
+        |obj| obj.is_need_search_module && !obj.has_privacy
+      }
+      
+      # 存储本地调试组件
+      development_folds = []
+
+      # 获取组件所在工程的pods 目录
+      pod_folds = modules.map{ |spec|
+        name = spec.name.split('/').first
+        fold = File.join(@sandbox.root,name)
+        if Dir.exist?(fold)
+          fold
+        else
+          development_pods = @sandbox.development_pods
+          if name && development_pods
+            podspec_file_path = development_pods[name]
+            if podspec_file_path && !podspec_file_path.empty? 
+              podspec_fold_path = File.dirname(podspec_file_path)
+              source_files = spec.attributes_hash['source_files']
+              if source_files && !source_files.empty?
+                source_files.each do |file|
+                  development_folds << File.join(podspec_fold_path,file)
+                end
+              end
+            end
+          end
+          nil
+        end
+      }.compact
+    
+      
+      pod_folds += development_folds # 拼接本地调试和远端的pod目录 
+      pod_folds << PrivacyUtils.project_code_fold # 拼接工程同名主目录
+      pod_folds += Pod::Config.instance.privacy_folds # 拼接外部传入的指定目录
+      pod_folds = pod_folds.uniq # 去重
+
+      # 处理工程隐私协议
+      PrivacyModule.load_project(pod_folds)
+    end
   end
 end

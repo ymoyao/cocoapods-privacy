@@ -34,7 +34,17 @@ module Pod
       end
 
       def run
-        PrivacyModule.load()
+        if PrivacyUtils.isMainProject()
+          # 单独执行install 分析步骤
+          installer = installer_for_config
+          installer.repo_update = false
+          installer.update = false
+          installer.deployment = false
+          installer.clean_install = false
+          installer.privacy_analysis()
+        else
+          PrivacyModule.load_module()
+        end
       end
     end
   end
