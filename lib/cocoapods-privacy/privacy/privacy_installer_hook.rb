@@ -65,7 +65,7 @@ module Pod
         def install!
         privacy_origin_install!()
  
-        if !(Pod::Config.instance.is_privacy || !Pod::Config.instance.privacy_folds.empty?)
+        if !(Pod::Config.instance.is_privacy || (Pod::Config.instance.privacy_folds && !Pod::Config.instance.privacy_folds.empty?))
           return
         end
 
