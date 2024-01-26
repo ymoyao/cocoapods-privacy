@@ -16,6 +16,13 @@ module Pod
                 @podspec_file = argv.arguments!.first
                 super
             end
+
+            def validate!
+                @podspec_file =  @podspec_file ?  @podspec_file : PrivacyUtils.podspec_file_path
+                unless @podspec_file && !@podspec_file.empty?
+                  raise Informative, 'no podspec file were found, please run pod privacy podspec_file_path'   
+                end
+            end
     
             def run
                 PrivacyModule.load_module(@podspec_file)
