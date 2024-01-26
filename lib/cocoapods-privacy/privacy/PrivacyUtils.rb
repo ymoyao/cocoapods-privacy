@@ -8,7 +8,7 @@ module PrivacyUtils
     
     # 通过是否包含podspec 来判断是否为主工程
     def self.isMainProject
-      !(podspec_file_path && !podspec_file_path.empty)
+      !(podspec_file_path && !podspec_file_path.empty?)
     end
 
     # 查找podspec
