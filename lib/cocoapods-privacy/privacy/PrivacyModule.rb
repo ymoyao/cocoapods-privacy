@@ -114,45 +114,47 @@ end
 module PrivacyModule
 
   public
-  def self.load(forceMain)
-    file_paths = []
-    if PrivacyUtils.isMainProject() || forceMain
-      project_path = PrivacyUtils.project_path()
-      resources_folder_path = File.join(File.basename(project_path, File.extname(project_path)),'Resources')
-      privacy_file_path = File.join(resources_folder_path,PrivacyUtils.privacy_name)
 
-      # 如果没有隐私文件，那么新建一个添加到工程中
-      # 打开 Xcode 项目，在Resources 下创建
-      project = Xcodeproj::Project.open(project_path)
-      main_group = project.main_group
-      resources_group = main_group.find_subpath('Resources', true)
+  # 处理工程
+  def self.load_project(folds)
+    project_path = PrivacyUtils.project_path()
+    resources_folder_path = File.join(File.basename(project_path, File.extname(project_path)),'Resources')
+    privacy_file_path = File.join(resources_folder_path,PrivacyUtils.privacy_name)
 
-      # 如果隐私文件不存在，创建隐私协议模版
-      unless File.exist?(privacy_file_path) 
-        PrivacyUtils.create_privacy_if_empty(privacy_file_path)
-      end
+    # 如果没有隐私文件，那么新建一个添加到工程中
+    # 打开 Xcode 项目，在Resources 下创建
+    project = Xcodeproj::Project.open(project_path)
+    main_group = project.main_group
+    resources_group = main_group.find_subpath('Resources', true)
 
-      # 如果不存在引用，创建新的引入xcode引用
-      if resources_group.find_file_by_path(PrivacyUtils.privacy_name).nil?
-        resources_group.new_reference(PrivacyUtils.privacy_name)
-        # resources_group.new_file(privacy_file_path)
-      end
-      
-      project.save
-   
-      # 存储返回结果
-      file_paths << privacy_file_path
-    else
-        privacy_hash = PrivacyModule.check(PrivacyUtils.podspec_file_path)
-        privacy_hash.each do |privacy_file_path, source_files|
-          data = PrivacyHunter.search_pricacy_apis(source_files)
-          PrivacyHunter.write_to_privacy(data,privacy_file_path) unless data.empty?
-          file_paths << privacy_file_path
-        end
+    # 如果隐私文件不存在，创建隐私协议模版
+    unless File.exist?(privacy_file_path) 
+      PrivacyUtils.create_privacy_if_empty(privacy_file_path)
     end
-    file_paths
+
+    # 如果不存在引用，创建新的引入xcode引用
+    if resources_group.find_file_by_path(PrivacyUtils.privacy_name).nil?
+      resources_group.new_reference(PrivacyUtils.privacy_name)
+      # resources_group.new_file(privacy_file_path)
+    end
+    
+    project.save
+
+    # 开始检索api,并返回json 字符串数据
+    json_data = PrivacyHunter.search_pricacy_apis(folds)
+
+    # 将数据写入隐私清单文件
+    PrivacyHunter.write_to_privacy(json_data,privacy_file_path)
   end
 
+  # 处理组件
+  def self.load_module
+    privacy_hash = PrivacyModule.check(PrivacyUtils.podspec_file_path)
+    privacy_hash.each do |privacy_file_path, source_files|
+      data = PrivacyHunter.search_pricacy_apis(source_files)
+      PrivacyHunter.write_to_privacy(data,privacy_file_path) unless data.empty?
+    end
+  end
 
   def self.check(podspec_file_path)
       # Step 1: 读取podspec
@@ -192,11 +194,17 @@ module PrivacyModule
   
   def self.parse_row(lines)
     rows = []  
+    if_stack = [] #排除if end 干扰
     lines.each do |line|
       content = line.strip
       is_comment = content.start_with?('#')
       is_spec_start = !is_comment && (content.include?('Pod::Spec.new') || content.include?('.subspec'))
-      is_spec_end = !is_comment && content.start_with?('end')  
+      is_if = !is_comment && content.start_with?('if')  
+      is_end = !is_comment && content.start_with?('end')
+      # 排除if end 对spec_end 的干扰
+      if_stack.push(true) if is_if
+      is_spec_end = if_stack.empty? && is_end
+      if_stack.pop if is_end
       row = BBRow.new(line, is_comment, is_spec_start, is_spec_end)
       rows << row
     end
