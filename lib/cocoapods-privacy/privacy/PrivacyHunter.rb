@@ -75,7 +75,7 @@ module PrivacyHunter
 
       # 检查新数据和原先数据是否一致
       if origin_privacy_data.strip == new_privacy_data.strip
-        puts "NSPrivacyAccessedAPITypes 数据一致，无需插入。"
+        puts "#{privacy_path} 数据一致，无需插入。"
       else
         unless origin_privacy_data.strip.empty?
           # 删除 :NSPrivacyAccessedAPITypes 键
@@ -119,11 +119,10 @@ module PrivacyHunter
 
       # 判断本地文件的最后修改时间是否与远端文件一致，如果一致则不进行下载
       if File.exist?(local_file_path) && file_identical?(local_file_path, remote_file_time)
-        puts "本地文件与远端文件一致，无需下载。文件路径: #{local_file_path}"
       else
         # 使用 curl 下载文件
         system("curl -o #{local_file_path} #{template_url}")
-        puts "文件已下载到: #{local_file_path}"
+        puts "隐私清单模版文件已更新到: #{local_file_path}"
 
         # 同步远程文件时间到本地文件
         syncFileTime?(local_file_path,remote_file_time)
