@@ -41,6 +41,7 @@ class BBSpec
   end
 
   def privacy_handle(podspec_file_path)
+    source_files_index = 1
     @rows.each_with_index do |line, index|
       if !line || line.is_a?(BBSpec) || !line.key || line.key.empty? 
         next
@@ -62,6 +63,7 @@ class BBSpec
             source_files_array = []
           end
         
+          source_files_index = index
           @privacy_sources = source_files_array.map do |file_path|
             File.join(File.dirname(podspec_file_path), file_path.strip)
           end
@@ -69,7 +71,7 @@ class BBSpec
       end
     end
     create_privacy_file_if_need(podspec_file_path)
-    modify_privacy_resource_bundle_if_need()
+    modify_privacy_resource_bundle_if_need(source_files_index)
   end
 
   # 对应Spec新增隐私文件
@@ -80,7 +82,7 @@ class BBSpec
   end
 
   # 把新增的隐私文件 映射给 podspec
-  def modify_privacy_resource_bundle_if_need
+  def modify_privacy_resource_bundle_if_need(source_files_index)
     if !@privacy_sources.empty?
       privacy_resource_bundle = { "#{full_name}.privacy" => @privacy_file }
       if @has_resource_bundle
@@ -99,11 +101,11 @@ class BBSpec
           end
         end
       else
-        space = PrivacyUtils.count_spaces_before_first_character(rows.first.content)
+        space = PrivacyUtils.count_spaces_before_first_character(rows[source_files_index].content)
         line = "#{alias_name}.resource_bundle = #{privacy_resource_bundle}"
-        line = PrivacyUtils.add_spaces_to_string(line,space + 2)
+        line = PrivacyUtils.add_spaces_to_string(line,space)
         row = BBRow.new(line)
-        @rows.insert(1, row)
+        @rows.insert(source_files_index+1, row)
       end
     end
   end
