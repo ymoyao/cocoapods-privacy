@@ -33,7 +33,7 @@ class BBSpec
 
   def initialize(name,alias_name,full_name)
     @rows = []
-    @privacy_sources = []
+    @privacy_sources = nil
     @name = name
     @alias_name = alias_name
     @full_name = full_name
@@ -53,7 +53,7 @@ class BBSpec
         spec = eval("Pod::Spec.new do |s|; s.source_files = #{line.value}; end;")
         if spec && !spec.attributes_hash['source_files'].nil?
           source_files_value = spec.attributes_hash['source_files']
-          if source_files_value.is_a?(String)
+          if source_files_value.is_a?(String) && !source_files_value.empty?
             source_files_array = [source_files_value]
           elsif source_files_value.is_a?(Array)
             # 如果已经是数组，直接使用
@@ -76,14 +76,14 @@ class BBSpec
 
   # 对应Spec新增隐私文件
   def create_privacy_file_if_need(podspec_file_path)
-    if !@privacy_sources.empty?
+    if @privacy_sources
       PrivacyUtils.create_privacy_if_empty(File.join(File.dirname(podspec_file_path), @privacy_file))
     end
   end
 
   # 把新增的隐私文件 映射给 podspec
   def modify_privacy_resource_bundle_if_need(source_files_index)
-    if !@privacy_sources.empty?
+    if @privacy_sources
       privacy_resource_bundle = { "#{full_name}.privacy" => @privacy_file }
       if @has_resource_bundle
         @rows.each_with_index do |line, index|
@@ -184,7 +184,7 @@ module PrivacyModule
 
      
       # Step 6: 获取privacy 相关信息，传递给后续处理
-      privacy_hash = fetch_privacy_hash(combin_sepcs_and_rows,podspec_file_path)
+      privacy_hash = fetch_privacy_hash(combin_sepcs_and_rows,podspec_file_path).compact
       filtered_privacy_hash = privacy_hash.reject { |_, value| value.empty? }
       filtered_privacy_hash
   end
