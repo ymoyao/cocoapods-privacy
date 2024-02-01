@@ -147,16 +147,19 @@ module PrivacyModule
     # 打开 Xcode 项目，在Resources 下创建
     project = Xcodeproj::Project.open(File.basename(project_path))
     main_group = project.main_group
-    resources_group = PrivacyUtils.find_group_by_path(main_group,resources_folder_path)
+    resources_group = main_group.find_subpath('Resources',false)
     if resources_group.nil?
       resources_group = main_group.new_group('Resources',resources_folder_path)
     end
 
     # 如果不存在引用，创建新的引入xcode引用
     if resources_group.find_file_by_path(PrivacyUtils.privacy_name).nil?
-      privacy_file_ref = resources_group.new_reference(PrivacyUtils.privacy_name)
+      privacy_file_ref = resources_group.new_reference(PrivacyUtils.privacy_name,:group)
+      privacy_file_ref.last_known_file_type = 'text.xml'
       target = project.targets.first
-      target.add_file_references([privacy_file_ref]) # 将文件引用添加到 target 中
+      resources_build_phase = target.resources_build_phase
+      resources_build_phase.add_file_reference(privacy_file_ref) # 将文件引用添加到 resources 构建阶段中
+      # target.add_file_references([privacy_file_ref]) # 将文件引用添加到 target 中
       # resources_group.new_file(privacy_file_path)
     end
     
