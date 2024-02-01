@@ -29,7 +29,7 @@ class BBRow
 end
 
 class BBSpec
-  attr_accessor :name, :alias_name, :full_name, :rows, :privacy_sources, :privacy_file
+  attr_accessor :name, :alias_name, :full_name, :parent, :rows, :privacy_sources, :privacy_file
 
   def initialize(name,alias_name,full_name)
     @rows = []
@@ -38,6 +38,23 @@ class BBSpec
     @alias_name = alias_name
     @full_name = full_name
     @privacy_file = "Pod/Privacy/#{full_name}/PrivacyInfo.xcprivacy"
+  end
+
+
+  def uniq_full_name_in_parent(name)
+    names = []
+    @rows.each_with_index do |line, index|
+      if line && line.is_a?(BBSpec)  
+        names << line.name
+      end
+    end
+
+    #判断names 中是否包含 name，如果包含，那么给name 添加一个 “.diff” 后缀，一直到names 中没有包含name为止
+    while names.include?(name)
+      name = "#{name}.diff"
+    end
+
+    "#{@full_name}.#{name}"
   end
 
   def privacy_handle(podspec_file_path)
@@ -196,17 +213,23 @@ module PrivacyModule
   
   def self.parse_row(lines)
     rows = []  
-    if_stack = [] #排除if end 干扰
+    code_stack = [] #栈，用来排除if end 等对spec 的干扰
+
     lines.each do |line|
       content = line.strip
       is_comment = content.start_with?('#')
       is_spec_start = !is_comment && (content.include?('Pod::Spec.new') || content.include?('.subspec'))
       is_if = !is_comment && content.start_with?('if')  
       is_end = !is_comment && content.start_with?('end')
+
       # 排除if end 对spec_end 的干扰
-      if_stack.push(true) if is_if
-      is_spec_end = if_stack.empty? && is_end
-      if_stack.pop if is_end
+      code_stack.push('spec') if is_spec_start 
+      code_stack.push('if') if is_if 
+      stack_last = code_stack.last 
+      is_spec_end = is_end && stack_last && stack_last == 'spec'
+      is_if_end = is_end && stack_last && stack_last == 'if'
+      code_stack.pop if is_spec_end || is_if_end
+
       row = BBRow.new(line, is_comment, is_spec_start, is_spec_end)
       rows << row
     end
@@ -236,15 +259,20 @@ module PrivacyModule
 
     rows.each do |row|
       if row.is_spec_start 
+        # 获取父spec
+        parent_spec = spec_stack.last 
+
         # 创建 spec
         name = row.content.split("'")[1]&.strip || default_name
         alias_name = row.content.split("|")[1]&.strip
-        full_name = spec_stack.empty? ? name : "#{spec_stack.last.full_name}.#{name}" 
+        full_name = parent_spec ? parent_spec.uniq_full_name_in_parent(name) : name
+
         spec = BBSpec.new(name,alias_name,full_name)
         spec.rows << row
+        spec.parent = parent_spec
 
         # 当存在 spec 时，存储在 spec.rows 中；不存在时，直接存储在外层
-        (spec_stack.empty? ? result_rows : spec_stack.last.rows) << spec
+        (parent_spec ? parent_spec.rows : result_rows ) << spec
   
         # spec 入栈
         spec_stack.push(spec)
