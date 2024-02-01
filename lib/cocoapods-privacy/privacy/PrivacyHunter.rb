@@ -8,6 +8,7 @@ require 'cocoapods-privacy/command'
 #  3、检索到的内容转换成隐私协议格式写入 隐私清单文件 PrivacyInfo.xcprivacy
 ##
 module PrivacyHunter
+
     KTypes = "NSPrivacyAccessedAPITypes"
     KType = "NSPrivacyAccessedAPIType"
     KReasons = "NSPrivacyAccessedAPITypeReasons"
@@ -103,12 +104,12 @@ module PrivacyHunter
     def self.fetch_template_plist_file
 
       unless File.exist?(PrivacyUtils.cache_config_file)
-        raise Informative, "无配置文件，run `pod privacy config config_file' 进行配置"
+        raise Pod::Informative, "无配置文件，run `pod privacy config config_file' 进行配置"
       end
   
       template_url = Privacy::Config.instance.api_template_url
       unless template_url && !template_url.empty?
-        raise Informative, "配置文件中无 `api.template.url` 配置，请补全后再更新配置 `pod privacy config config_file` "
+        raise Pod::Informative, "配置文件中无 `api.template.url` 配置，请补全后再更新配置 `pod privacy config config_file` "
       end
 
       # 目标文件路径
