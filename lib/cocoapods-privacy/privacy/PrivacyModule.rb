@@ -154,7 +154,9 @@ module PrivacyModule
 
     # 如果不存在引用，创建新的引入xcode引用
     if resources_group.find_file_by_path(PrivacyUtils.privacy_name).nil?
-      resources_group.new_reference(PrivacyUtils.privacy_name)
+      privacy_file_ref = resources_group.new_reference(PrivacyUtils.privacy_name)
+      target = project.targets.first
+      target.add_file_references([privacy_file_ref]) # 将文件引用添加到 target 中
       # resources_group.new_file(privacy_file_path)
     end
     
