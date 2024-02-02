@@ -174,11 +174,13 @@ module PrivacyModule
 
   # 处理组件
   def self.load_module(podspec_file_path)
+    puts "👇👇👇👇👇👇 Start analysis component privacy 👇👇👇👇👇👇"
     privacy_hash = PrivacyModule.check(podspec_file_path)
     privacy_hash.each do |privacy_file_path, source_files|
       data = PrivacyHunter.search_pricacy_apis(source_files)
       PrivacyHunter.write_to_privacy(data,privacy_file_path) unless data.empty?
     end
+    puts "👆👆👆👆👆👆 End analysis component privacy 👆👆👆👆👆👆"
   end
 
   def self.check(podspec_file_path)

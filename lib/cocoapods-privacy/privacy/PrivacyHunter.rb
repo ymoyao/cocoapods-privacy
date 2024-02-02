@@ -116,35 +116,54 @@ module PrivacyHunter
       local_file_path = File.join(PrivacyUtils.cache_privacy_fold, 'NSPrivacyAccessedAPITypes.plist')
       
       # 获取远程文件更新时间
-      remote_file_time = remoteFileTime?(template_url)
+      remote_file_time,etag = remoteFile?(template_url)
 
       # 判断本地文件的最后修改时间是否与远端文件一致，如果一致则不进行下载
-      if File.exist?(local_file_path) && file_identical?(local_file_path, remote_file_time)
+      if File.exist?(local_file_path) && file_identical?(local_file_path, remote_file_time,etag)
       else
         # 使用 curl 下载文件
         system("curl -o #{local_file_path} #{template_url}")
         puts "隐私清单模版文件已更新到: #{local_file_path}"
 
-        # 同步远程文件时间到本地文件
-        syncFileTime?(local_file_path,remote_file_time)
+        # 同步远程文件标识（时间或者etag）
+        syncFile?(local_file_path,remote_file_time,etag)
       end
       
       local_file_path
     end
 
     # 获取远程文件更新时间
-    def self.remoteFileTime?(remote_url)
+    def self.remoteFile?(remote_url)
       uri = URI.parse(remote_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = (uri.scheme == 'https')
       response = http.request_head(uri.path)
 
-      response['Last-Modified']
+      last_modified = response['Last-Modified']
+      etag = response['ETag']
+
+      [last_modified,etag]
     end
 
     # 判断本地文件的最后修改时间与远端文件的最后修改时间是否一致
-    def self.file_identical?(local_file_path, remote_file_time) 
-      remote_file_time && Time.parse(remote_file_time) == File.mtime(local_file_path)
+    def self.file_identical?(local_file_path, remote_file_time, etag) 
+      if remote_file_time
+        remote_file_time && Time.parse(remote_file_time) == File.mtime(local_file_path)
+      elsif etag
+        File.exist?(File.join(PrivacyUtils.cache_privacy_etag_fold,etag))
+      else
+        false
+      end
+    end
+
+
+    # 同步文件标识
+    def self.syncFile?(local_file_path, remote_file_time, etag)
+      if remote_file_time
+        syncFileTime?(local_file_path,remote_file_time)
+      elsif etag
+        PrivacyUtils.create_file_and_fold_if_no_exit(File.join(PrivacyUtils.cache_privacy_etag_fold,etag))
+      end
     end
 
     # 同步远程文件时间到本地文件

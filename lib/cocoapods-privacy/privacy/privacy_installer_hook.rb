@@ -74,6 +74,8 @@ module Pod
 
 
     def privacy_handle(custom_folds)
+
+      puts "👇👇👇👇👇👇 Start analysis project privacy 👇👇👇👇👇👇"
       # 过滤出自身组件 && 自身没有隐私协议文件的spec
       modules = @analysis_result.specifications.select { 
         |obj| obj.is_need_search_module && !obj.has_privacy
@@ -118,6 +120,7 @@ module Pod
         # 处理工程隐私协议
         PrivacyModule.load_project(pod_folds)
       end
+      puts "👆👆👆👆👆👆 End analysis project privacy 👆👆👆👆👆👆"
     end
   end
 end

@@ -61,6 +61,12 @@ module PrivacyUtils
       target_directory
     end
 
+    # etag 文件夹
+    def self.cache_privacy_etag_fold
+      File.join(cache_privacy_fold,'etag')
+    end
+    
+    # config.json 文件
     def self.cache_config_file
       config_file = File.join(cache_privacy_fold, 'config.json')
     end
