@@ -11,7 +11,7 @@ Apple 2024 will review the App's privacy list in the spring, and any apps that d
 #### init
 First of all, you must set a json config to cocoapods-privacy, this is a defalut config.json
 ```
-$ pod privacy config https://github.com/ymoyao/cocoapods-privacy/blob/main/resources/config.json
+$ pod privacy config https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/config.json
 ```
 
 There has 3 keys in defalut config, you should custom it!
