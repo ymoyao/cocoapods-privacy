@@ -4,8 +4,9 @@ Apple 2024 will review the App's privacy list in the spring, and any apps that d
 [Click to view details on Apple](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files)
 
 ## Installation
-
-    $ gem install cocoapods-privacy
+```
+$ gem install cocoapods-privacy
+```
 
 ## Usage
 #### init
@@ -26,7 +27,7 @@ There has 3 keys in defalut config, you should custom it!
 
 #### To Component
 ```
-    $ pod privacy spec [podspec_file_path]
+$ pod privacy spec [podspec_file_path]
 ```
 This command will auto create privacy file, and search the path of podspec' source_files' define relate to NSPrivacyAccessedAPITypes, finaly, write to PrivacyInfo.xcprivacy file.
 if your component has much subspec,  all subspec that define ‘source_files’ will create PrivacyInfo.xcprivacy, and auto modify .podspec link .xcprivacy to 'resource_bundle' key.
@@ -68,9 +69,9 @@ end
     
 #### To Project
 ```
-    $ pod install --privacy
-    or
-    $ pod privacy install
+$ pod install --privacy
+or
+$ pod privacy install
 ```
 <img width="298" alt="截屏2024-02-02 10 59 59" src="https://github.com/ymoyao/cocoapods-privacy/assets/13619221/c6f10e36-0f62-497a-93d4-f8b336dc8df4">
 
