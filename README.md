@@ -21,7 +21,7 @@ There has 3 keys in defalut config, you should custom it!
 ```
 "source.white.list": ["replace me with yourserver"], 
 "source.black.list": ["replace me such as github.com"],
-"api.template.url": "https://github.com/ymoyao/cocoapods-privacy/blob/main/resources/NSPrivacyAccessedAPITypes.plist"
+"api.template.url": "https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/NSPrivacyAccessedAPITypes.plist"
 ```
 
 #### To Component
