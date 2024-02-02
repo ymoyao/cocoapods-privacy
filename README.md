@@ -39,7 +39,7 @@ Pod::Spec.new do |s|
   ...
   s.source_files = 'xxxx'
   s.subspec 'idfa' do |sp|
-      sp.source_files = 'mmmm'
+      sp.source_files = 'xxxxx'
   end
   s.subspec 'noidfa' do |sp|
   end
