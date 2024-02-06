@@ -103,18 +103,42 @@ class BBSpec
     if @privacy_sources
       privacy_resource_bundle = { "#{full_name}.privacy" => @privacy_file }
       if @has_resource_bundle
+        line_incomplete = nil
         @rows.each_with_index do |line, index|
-          if !line || line.is_a?(BBSpec) || !line.key || line.key.empty? 
+          if !line || line.is_a?(BBSpec)
             next
           end
 
-          if !line.is_comment && line.key.include?(".resource_bundle")
-            origin_resource_bundle = eval(line.value)
-            merged_resource_bundle = origin_resource_bundle.merge(privacy_resource_bundle)
+          is_resource_bundle_line = line.key && line.key.include?(".resource_bundle")
+          if !line.is_comment && (is_resource_bundle_line || line_incomplete)
+            begin
+              if line_incomplete
+                code = "#{line_incomplete.value}#{line.content}"
+              else
+                code = "#{line.value}"
+              end
 
+              # 清除 content 和 value, 后面会把所有的resource_bundle 组装起来，多余的内容要清除，避免重复
+              line.content = ''
+              line.value = nil
+
+              RubyVM::InstructionSequence.compile(code)
+              origin_resource_bundle = eval(code)
+            rescue SyntaxError, StandardError => e
+              unless line_incomplete
+                line_incomplete = line
+              end
+              line_incomplete.value = code if line_incomplete #存储当前残缺的value,和后面完整的进行拼接
+              next
+            end
+
+            final_line = (line_incomplete ? line_incomplete : line)
+
+            merged_resource_bundle = origin_resource_bundle.merge(privacy_resource_bundle)
             @resource_bundle = merged_resource_bundle
-            line.value = merged_resource_bundle
-            line.content = "#{line.key}= #{line.value}"
+            final_line.value = merged_resource_bundle
+            final_line.content = "#{final_line.key}= #{final_line.value}"
+            break
           end
         end
       else
