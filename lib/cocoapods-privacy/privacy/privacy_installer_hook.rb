@@ -98,8 +98,12 @@ module Pod
               podspec_fold_path = File.dirname(podspec_file_path)
               source_files = spec.attributes_hash['source_files']
               if source_files && !source_files.empty?
-                source_files.each do |file|
-                  development_folds << File.join(podspec_fold_path,file)
+                if source_files.is_a?(String) && !source_files.empty?
+                  development_folds << File.join(podspec_fold_path,source_files)
+                elsif source_files.is_a?(Array)
+                  source_files.each do |file|
+                    development_folds << File.join(podspec_fold_path,file)
+                  end
                 end
               end
             end
