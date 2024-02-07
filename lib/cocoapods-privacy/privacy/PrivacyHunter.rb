@@ -182,9 +182,15 @@ module PrivacyHunter
       # 获取文件夹下所有文件（包括子文件夹）
       all_files = []
       folder_paths.each do |folder|
-        allowed_extensions = ['m', 'c', 'swift', 'mm', 'hap', 'cpp']
-        pattern = File.join(folder, '**', '*.{'+allowed_extensions.join(',')+'}')
-        all_files += Dir.glob(pattern, File::FNM_DOTMATCH).reject { |file| File.directory?(file) }
+        # allowed_extensions = ['m', 'c', 'swift', 'mm', 'hap', 'cpp']
+        # pattern = File.join(folder, '**', '*.{'+allowed_extensions.join(',')+'}')
+        # all_files += Dir.glob(pattern, File::FNM_DOTMATCH).reject { |file| File.directory?(file) }
+
+        # 使用 Dir.glob 方法直接获取符合条件的文件路径
+        files_in_folder = Dir.glob(folder, File::FNM_DOTMATCH)
+        
+        # 过滤掉目录路径，只保留文件路径，并将其添加到 all_files 数组中
+        all_files += files_in_folder.reject { |file| File.directory?(file) }
       end
       # 遍历文件进行检索
       all_files.uniq.each_with_index do |file_path, index|
