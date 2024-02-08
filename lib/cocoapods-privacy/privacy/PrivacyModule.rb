@@ -190,20 +190,25 @@ module PrivacyModule
     project.save
 
     # 开始检索api,并返回json 字符串数据
+    PrivacyLog.clean_result_log()
     json_data = PrivacyHunter.search_pricacy_apis(folds)
 
     # 将数据写入隐私清单文件
     PrivacyHunter.write_to_privacy(json_data,privacy_file_path)
+    PrivacyLog.result_log_tip()
   end
 
   # 处理组件
   def self.load_module(podspec_file_path)
     puts "👇👇👇👇👇👇 Start analysis component privacy 👇👇👇👇👇👇"
+    PrivacyLog.clean_result_log()
     privacy_hash = PrivacyModule.check(podspec_file_path)
     privacy_hash.each do |privacy_file_path, source_files|
+      PrivacyLog.write_to_result_log("#{privacy_file_path}: \n")
       data = PrivacyHunter.search_pricacy_apis(source_files)
       PrivacyHunter.write_to_privacy(data,privacy_file_path) unless data.empty?
     end
+    PrivacyLog.result_log_tip()
     puts "👆👆👆👆👆👆 End analysis component privacy 👆👆👆👆👆👆"
   end
 

@@ -10,4 +10,6 @@ require 'cocoapods-privacy/privacy/PrivacyUtils'
 require 'cocoapods-privacy/privacy/PrivacyModule'
 require 'cocoapods-privacy/privacy/PrivacyHunter'
 require 'cocoapods-privacy/privacy/PrivacyConfig'
+require 'cocoapods-privacy/privacy/PrivacyLog'
+
 

@@ -198,9 +198,6 @@ module PrivacyHunter
 
     #搜索所有子文件夹
     def self.search_files(folder_paths, apis)
-      #清除上一次log
-      clean_log()
-
       # 获取文件夹下所有文件（包括子文件夹）
       all_files = []
       folder_paths.each do |folder|
@@ -223,28 +220,11 @@ module PrivacyHunter
         
         unless api_contains.empty? 
           log = "File #{file_path} contains the keyword '#{api_contains.keys}'.\n" 
-          write_log(log)
+          PrivacyLog.write_to_result_log(log)
         end
       end
-      puts "详细log请查看 #{PrivacyUtils.cache_log_file} 文件"
+      PrivacyLog.write_to_result_log("\n") if !apis_found.empty?
       apis_found
-    end
-
-    def self.write_log(log)
-      log_file_path = PrivacyUtils.cache_log_file
-      is_create = PrivacyUtils.create_file_and_fold_if_no_exit(log_file_path,log)
-      unless is_create
-        File.open(log_file_path, "a") do |file|
-          file << log
-        end
-      end
-    end
-
-    def self.clean_log()
-      File.open(PrivacyUtils.cache_log_file, "w") do |file|
-        # 写入空字符串，清空文件内容
-        file.write("")
-      end
     end
 end
 
