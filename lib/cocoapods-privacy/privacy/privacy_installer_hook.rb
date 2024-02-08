@@ -88,33 +88,29 @@ module Pod
       pod_folds = modules.map{ |spec|
         name = spec.name.split('/').first
         fold = File.join(@sandbox.root,name)
-        if Dir.exist?(fold)
-          fold
-        else
-          development_pods = @sandbox.development_pods
-          if name && development_pods
-            podspec_file_path = development_pods[name]
-            if podspec_file_path && !podspec_file_path.empty? 
-              podspec_fold_path = File.dirname(podspec_file_path)
-              source_files = spec.attributes_hash['source_files']
-              if source_files && !source_files.empty?
-                if source_files.is_a?(String) && !source_files.empty?
-                  development_folds << File.join(podspec_fold_path,source_files)
-                elsif source_files.is_a?(Array)
-                  source_files.each do |file|
-                    development_folds << File.join(podspec_fold_path,file)
-                  end
-                end
+        podspec_file_path_develop = validate_development_pods(name)
+        # 先验证是否是指向本地的组件（发现有的情况下 组件指向本地Pods 下依旧还是会有该组件，所以这里先判断本地的）
+        if podspec_file_path_develop
+          podspec_fold_path = File.dirname(podspec_file_path_develop)
+          source_files = spec.attributes_hash['source_files']
+          if source_files && !source_files.empty?
+            if source_files.is_a?(String) && !source_files.empty?
+              development_folds << File.join(podspec_fold_path,source_files)
+            elsif source_files.is_a?(Array)
+              source_files.each do |file|
+                development_folds << File.join(podspec_fold_path,file)
               end
             end
           end
           nil
+        elsif Dir.exist?(fold)
+          formatter_search_fold(fold) 
         end
       }.compact
     
       
       pod_folds += development_folds # 拼接本地调试和远端的pod目录 
-      pod_folds += [PrivacyUtils.project_code_fold].compact # 拼接工程同名主目录
+      pod_folds += [formatter_search_fold(PrivacyUtils.project_code_fold)].compact # 拼接工程同名主目录
       pod_folds += custom_folds || [] # 拼接外部传入的自定义目录
       pod_folds = pod_folds.uniq # 去重
 
@@ -125,6 +121,23 @@ module Pod
         PrivacyModule.load_project(pod_folds)
       end
       puts "👆👆👆👆👆👆 End analysis project privacy 👆👆👆👆👆👆"
+    end
+
+    private
+    def formatter_search_fold(fold)
+      File.join(fold,"**","*.{m,c,swift,mm,hap,hpp,cpp}") 
+    end
+
+    def validate_development_pods(name)
+      result = nil
+      development_pods = @sandbox.development_pods
+      if name && !name.empty? development_pods && !development_pods.empty?
+        podspec_file_path = development_pods[name]
+        if podspec_file_path && !podspec_file_path.empty? 
+          result = podspec_file_path
+        end
+      end
+      result
     end
   end
 end
