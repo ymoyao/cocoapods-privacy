@@ -14,51 +14,65 @@ module PrivacyHunter
     KReasons = "NSPrivacyAccessedAPITypeReasons"
     KAPI = "NSPrivacyAccessedAPI"
 
-    # source_files = ARGV[0]#传入source文件路径，如有多个使用 “,” 逗号分割
-    # privacyInfo_file = ARGV[1]#传入目标 PrivacyInfo.xcprivacy
-
-    def self.search_pricacy_apis(source_folders)
-      # #读取源文件，也就是搜索目标文件
-      # source_folders = source_files.split(",")
+    def self.formatter_privacy_template()
       #模版数据源plist文件
       template_plist_file = fetch_template_plist_file()
 
       # 读取并解析 数据源 plist 文件
       json_str = `plutil -convert json -o - "#{template_plist_file}"`.chomp
       map = JSON.parse(json_str)
-      arr = map[KTypes]
+      type_datas = map[KTypes]
 
-      #解析并按照API模版查询指定文件夹
-      privacyArr = []
-      arr.each do |value|
-        privacyDict = {}
+      apis = {}
+      keyword_type_map = {} #{systemUptime:NSPrivacyAccessedAPICategorySystemBootTime,mach_absolute_time:NSPrivacyAccessedAPICategorySystemBootTime .....}
+      type_datas.each do |value|
         type = value[KType]
-        reasons = []
-        apis = value[KAPI]
-        apis.each do |s_key, s_value|
-            if search_files(source_folders, s_key)
-                s_vlaue_split = s_value.split(',')
-                reasons += s_vlaue_split
-            end
+        apis_inner = value[KAPI]
+        apis_inner.each do |keyword, reason|
+          keyword_type_map[keyword] = type
         end
-        
-        #按照隐私清单拼接数据
-        reasons = reasons.uniq
-        if !reasons.empty?
-            privacyDict[KType] = type
-            privacyDict[KReasons] = reasons
-            privacyArr.push(privacyDict)
-        end
-        # puts "type: #{type}"
-        # puts "reasons: #{reasons.uniq}"
+        apis = apis.merge(apis_inner)
+      end
+      [apis,keyword_type_map]
+    end
 
+    def self.search_pricacy_apis(source_folders)
+      apis,keyword_type_map = formatter_privacy_template()
+
+      # 优化写法，一次循环完成所有查询
+      datas = []
+      apis_found = search_files(source_folders, apis)
+      unless apis_found.empty?
+        apis_found.each do |keyword,reason|
+          reasons = reason.split(',')
+          type = keyword_type_map[keyword]
+          
+          # 如果有数据 给data增加reasons
+          datas.map! do |data|
+            if data[KType] == type
+              data[KReasons] += reasons
+              data[KReasons] = data[KReasons].uniq
+            end
+            data
+          end
+
+          # 如果没数据，新建data
+          unless datas.any? { |data| data[KType] == type }
+            data = {}
+            data[KType] = type
+            data[KReasons] ||= []
+            data[KReasons] += reasons
+            data[KReasons] = data[KReasons].uniq
+            datas.push(data)
+          end
+        end
       end
 
       # 打印出搜索结果
-      puts privacyArr
+      puts datas
 
       # 转换成 JSON 字符串
-      json_data = privacyArr.to_json
+      json_data = datas.to_json
     end
 
 
@@ -172,16 +186,25 @@ module PrivacyHunter
     end
 
     # 文件是否包含内容
-    def self.contains_keyword?(file_path, keyword)
-      File.read(file_path).include? keyword
+    def self.contains_apis?(file_path, apis)
+      file_content = File.read(file_path)
+      apis_found = {}
+      apis.each do |keyword, value|
+        if file_content.include?(keyword)
+          apis_found[keyword] = value
+        end
+      end
+
+      apis_found
     end
 
     #搜索所有子文件夹
-    def self.search_files(folder_paths, keyword)
+    def self.search_files(folder_paths, apis)
 
       # 获取文件夹下所有文件（包括子文件夹）
       all_files = []
       folder_paths.each do |folder|
+        # 不再做额外格式过滤，避免和podspec中source_files 自带的格式冲突
         # allowed_extensions = ['m', 'c', 'swift', 'mm', 'hap', 'cpp']
         # pattern = File.join(folder, '**', '*.{'+allowed_extensions.join(',')+'}')
         # all_files += Dir.glob(pattern, File::FNM_DOTMATCH).reject { |file| File.directory?(file) }
@@ -193,13 +216,12 @@ module PrivacyHunter
         all_files += files_in_folder.reject { |file| File.directory?(file) }
       end
       # 遍历文件进行检索
+      apis_found = {}
       all_files.uniq.each_with_index do |file_path, index|
-        if contains_keyword?(file_path, keyword)
-          puts "File #{file_path} contains the keyword '#{keyword}'."
-          return true
-        end
+        apis_found = apis_found.merge(contains_apis?(file_path, apis))
+        puts "File #{file_path} contains the keyword '#{apis_found.keys}'." unless apis_found.empty?
       end
-      return false
+      apis_found
     end
 end
 
