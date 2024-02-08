@@ -71,6 +71,11 @@ module PrivacyUtils
       config_file = File.join(cache_privacy_fold, 'config.json')
     end
 
+    # config.json 文件
+    def self.cache_log_file
+      config_file = File.join(cache_privacy_fold, 'privacy.log')
+    end
+
     # 创建默认隐私协议文件
     def self.create_privacy_if_empty(file_path) 
       # 文件内容
