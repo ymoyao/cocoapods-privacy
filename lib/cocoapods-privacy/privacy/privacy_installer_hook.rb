@@ -131,7 +131,7 @@ module Pod
     def validate_development_pods(name)
       result = nil
       development_pods = @sandbox.development_pods
-      if name && !name.empty? development_pods && !development_pods.empty?
+      if name && !name.empty? && development_pods && !development_pods.empty?
         podspec_file_path = development_pods[name]
         if podspec_file_path && !podspec_file_path.empty? 
           result = podspec_file_path
