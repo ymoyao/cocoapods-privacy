@@ -67,7 +67,14 @@ class BBSpec
       if !line.is_comment && line.key.include?(".resource_bundle")
         @has_resource_bundle = true
       elsif !line.is_comment && line.key.include?(".source_files")
-        spec = eval("Pod::Spec.new do |s|; s.source_files = #{line.value}; end;")
+        begin
+          code = "Pod::Spec.new do |s|; s.source_files = #{line.value}; end;"
+          RubyVM::InstructionSequence.compile(code)
+          spec = eval(code)
+        rescue SyntaxError, StandardError => e
+          raise Pod::Informative, "source_files字段 不支持多行拼写，请修改成成单行格式，重新执行pod privacy spec 命令"
+        end
+
         if spec && !spec.attributes_hash['source_files'].nil?
           source_files_value = spec.attributes_hash['source_files']
           if source_files_value.is_a?(String) && !source_files_value.empty?
