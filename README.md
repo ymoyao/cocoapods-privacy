@@ -24,6 +24,10 @@ There has 3 keys in defalut config, you should custom it!
 "source.black.list": ["replace me such as github.com"],
 "api.template.url": "https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/NSPrivacyAccessedAPITypes.plist"
 ```
+After custom,you can set local config like this
+```
+$ pod privacy config /yourfilepath/config.json
+```
 
 #### To Component
 ```
