@@ -83,22 +83,36 @@ module Pod
       
       # 存储本地调试组件
       development_folds = []
+      exclude_folds = []
 
       # 获取组件所在工程的pods 目录
       pod_folds = modules.map{ |spec|
         name = spec.name.split('/').first
+
         fold = File.join(@sandbox.root,name)
         podspec_file_path_develop = validate_development_pods(name)
         # 先验证是否是指向本地的组件（发现有的情况下 组件指向本地Pods 下依旧还是会有该组件，所以这里先判断本地的）
         if podspec_file_path_develop
           podspec_fold_path = File.dirname(podspec_file_path_develop)
           source_files = spec.attributes_hash['source_files']
+          exclude_files = spec.attributes_hash['exclude_files']
           if source_files && !source_files.empty?
             if source_files.is_a?(String) && !source_files.empty?
               development_folds << File.join(podspec_fold_path,source_files)
             elsif source_files.is_a?(Array)
               source_files.each do |file|
                 development_folds << File.join(podspec_fold_path,file)
+              end
+            end
+
+            # 处理exclude_files 排除文件夹
+            if exclude_files && !exclude_files.empty?
+              if exclude_files.is_a?(String) && !exclude_files.empty?
+                exclude_folds << File.join(podspec_fold_path,exclude_files)
+              elsif exclude_files.is_a?(Array)
+                exclude_files.each do |file|
+                  exclude_folds << File.join(podspec_fold_path,file)
+                end
               end
             end
           end
@@ -118,7 +132,7 @@ module Pod
         puts "无组件或工程目录, 请检查工程"
       else
         # 处理工程隐私协议
-        PrivacyModule.load_project(pod_folds)
+        PrivacyModule.load_project(pod_folds,exclude_folds.uniq)
       end
       puts "👆👆👆👆👆👆 End analysis project privacy 👆👆👆👆👆👆"
     end
