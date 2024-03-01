@@ -36,12 +36,12 @@ module PrivacyHunter
       [apis,keyword_type_map]
     end
 
-    def self.search_pricacy_apis(source_folders)
+    def self.search_pricacy_apis(source_folders,exclude_folders=[])
       apis,keyword_type_map = formatter_privacy_template()
 
       # 优化写法，一次循环完成所有查询
       datas = []
-      apis_found = search_files(source_folders, apis)
+      apis_found = search_files(source_folders, exclude_folders, apis)
       unless apis_found.empty?
         apis_found.each do |keyword,reason|
           reasons = reason.split(',')
@@ -197,7 +197,7 @@ module PrivacyHunter
     end
 
     #搜索所有子文件夹
-    def self.search_files(folder_paths, apis)
+    def self.search_files(folder_paths, exclude_folders, apis)
       # 获取文件夹下所有文件（包括子文件夹）
       all_files = []
       folder_paths.each do |folder|
@@ -212,9 +212,20 @@ module PrivacyHunter
         # 过滤掉目录路径，只保留文件路径，并将其添加到 all_files 数组中
         all_files += files_in_folder.reject { |file| File.directory?(file) }
       end
+
+      # 获取需要排除的文件
+      exclude_files = []
+      exclude_folders.each do |folder|
+        files_in_folder = Dir.glob(folder, File::FNM_DOTMATCH)
+        exclude_files += files_in_folder.reject { |file| File.directory?(file) }
+      end
+
+      # 剔除掉需要排除的文件
+      all_files = all_files.uniq - exclude_files.uniq
+
       # 遍历文件进行检索
       apis_found = {}
-      all_files.uniq.each_with_index do |file_path, index|
+      all_files.each_with_index do |file_path, index|
         api_contains = contains_apis?(file_path, apis)
         apis_found = apis_found.merge(api_contains)
         
