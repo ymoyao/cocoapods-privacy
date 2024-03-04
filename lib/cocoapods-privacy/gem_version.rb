@@ -1,3 +1,3 @@
 module CocoapodsPrivacy
-  VERSION = "0.2.5"
+  VERSION = "0.3.0"
 end
