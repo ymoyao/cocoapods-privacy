@@ -3,9 +3,9 @@ require 'cocoapods-core/specification/dsl/attribute_support'
 require 'cocoapods-core/specification/dsl/attribute'
 require 'xcodeproj'
 
-KSource_Files_Key = '.source_files'
-KExclude_Files_Key = '.exclude_files'
-KResource_Bundle_Key = '.resource_bundle'
+KSource_Files_Key = 'source_files' #不存在单数 source_file
+KExclude_Files_Key = 'exclude_files' #不存在单数 exclude_file
+KResource_Bundle_Key = 'resource_bundle' #resource_bundle 和 resource_bundles 这两个参数本质上是一样的，resource_bundle 也能指向多个参数
 
 class BBRow
   attr_accessor  :content, :is_comment, :is_spec_start, :is_spec_end, :key, :value
@@ -60,15 +60,21 @@ class BBSpec
     "#{@full_name}.#{name}"
   end
 
+  # 单独属性转成spec字符串，方便解析
+  def assemble_single_property_to_complex(property_name)
+    property_name += "s" if property_name == KResource_Bundle_Key #检测到单数resource_bundle,直接转成复数，功能一致
+    property_name
+  end
+
   def privacy_handle(podspec_file_path)
     @rows.each_with_index do |line, index|
       if !line || line.is_a?(BBSpec) || !line.key || line.key.empty? 
         next
       end
        
-      if !line.is_comment && line.key.include?(KResource_Bundle_Key)
+      if !line.is_comment && line.key.include?("." + KResource_Bundle_Key)
         @has_resource_bundle = true
-      elsif !line.is_comment && line.key.include?(KSource_Files_Key)
+      elsif !line.is_comment && line.key.include?("." + KSource_Files_Key)
         @source_files_index = index
       end
     end
@@ -116,8 +122,11 @@ class BBSpec
             line.value = nil
           end
 
-          RubyVM::InstructionSequence.compile(code)
-          property_value = eval(code)
+          property_name_complex = assemble_single_property_to_complex(property_name)
+          spec_str = "Pod::Spec.new do |s|; s.#{property_name_complex} = #{code}; end;"
+          RubyVM::InstructionSequence.compile(spec_str)
+          spec = eval(spec_str)
+          property_value = spec.attributes_hash[property_name_complex]
         rescue SyntaxError, StandardError => e
           unless line_processing
             line_processing = line
