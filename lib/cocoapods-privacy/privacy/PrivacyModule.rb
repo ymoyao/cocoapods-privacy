@@ -387,7 +387,7 @@ module PrivacyModule
     privacy_hash = {}
     specs = rows.select { |row| row.is_a?(BBSpec) }
     specs.each do |spec|
-      value = spec.privacy_sources_files ? {KSource_Files_Key => spec.privacy_sources_files,KExclude_Files_Key => spec.privacy_exclude_files || ""} : {}
+      value = spec.privacy_sources_files ? {KSource_Files_Key => spec.privacy_sources_files,KExclude_Files_Key => spec.privacy_exclude_files || []} : {}
       privacy_hash[File.join(File.dirname(podspec_file_path),spec.privacy_file)] = value
       privacy_hash.merge!(fetch_privacy_hash(spec.rows,podspec_file_path))
     end
