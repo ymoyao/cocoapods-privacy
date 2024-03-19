@@ -28,6 +28,9 @@ module Pod
                 return false
             end
 
+            # 如果指定了--all 参数，那么忽略黑名单白名单，全部检索
+            return true if Pod::Config.instance.is_all
+
             # 判断域名白名单 和 黑名单，确保该组件是自己的组件，第三方sdk不做检索
             config = Privacy::Config.instance          
             git_source_whitelisted = config.source_white_list.any? { |item| git_source.include?(item) }

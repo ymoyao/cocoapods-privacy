@@ -13,11 +13,18 @@ module Pod
             def self.options
                 [
                   ["--folds=folds", '传入自定义搜索文件夹，多个文件目录使用“,”分割'],
+                  ['--query', '仅查询隐私api，不做写入'],
+                  ['--all', '忽略黑名单和白名单限制，查询工程所有组件'],
                 ].concat(super)
             end
 
             def initialize(argv)
                 @folds = argv.option('folds', '').split(',')
+                is_query = argv.flag?('query',false)
+                is_all = argv.flag?('all',false)
+                instance = Pod::Config.instance
+                instance.is_query = is_query
+                instance.is_all = is_all
                 super
             end
     

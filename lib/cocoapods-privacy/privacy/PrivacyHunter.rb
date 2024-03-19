@@ -77,6 +77,10 @@ module PrivacyHunter
 
 
     def self.write_to_privacy(json_data,privacy_path)
+
+      # 如果指定了--query 参数，那么不进行写入操作，仅用来查询
+      return if Pod::Config.instance.is_query
+
       # 转换 JSON 为 plist 格式
       plist_data = `echo '#{json_data}' | plutil -convert xml1 - -o -`
 
@@ -227,7 +231,7 @@ module PrivacyHunter
       apis_found = {}
       all_files.each_with_index do |file_path, index|
         api_contains = contains_apis?(file_path, apis)
-        apis_found = apis_found.merge(api_contains)
+        apis_found = apis_found.merge(api_contains) unless Pod::Config.instance.is_query # 如果指定了--query 参数，那么不进行写入操作，仅用来查询
         
         unless api_contains.empty? 
           log = "File #{file_path} contains the keyword '#{api_contains.keys}'.\n" 
