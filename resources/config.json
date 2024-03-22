@@ -1,5 +1,5 @@
 {
 	"source.white.list": [],
-	"source.black.list": [],
+	"source.black.list": ["github.com"],
 	"api.template.url": "https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/NSPrivacyAccessedAPITypes.plist"
 }

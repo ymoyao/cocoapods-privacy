@@ -157,9 +157,11 @@
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPI</key>
 			<dict>
-				<key>NSUserDefaults</key>
+				<key>UserDefaults.</key>
 				<string>CA92.1</string>
-				<key>UserDefaults.standard</key>
+				<key>UserDefaults alloc</key>
+				<string>CA92.1</string>
+				<key>UserDefaults standard</key>
 				<string>CA92.1</string>
 			</dict>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
