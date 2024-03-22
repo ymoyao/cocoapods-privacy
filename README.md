@@ -9,27 +9,48 @@ $ gem install cocoapods-privacy
 ```
 
 ## Usage
-#### init
+### init
 First of all, you must set a json config to cocoapods-privacy, this is a defalut config.json
 ```
 $ pod privacy config https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/config.json
 ```
 
-There has 3 keys in defalut config, you should custom it!
-* source.white.list : a white list of source, defalut is empty, so, you should add you self component sources, and it work in command 'pod privacy install' or 'pod install --privacy', will search white list for NSPrivacyAccessedAPITypes.
-* source.black.list : a black list of source, defalut is empty, it work in command 'pod privacy install' or 'pod install --privacy'.
-* api.template.url : its required, a template for search NSPrivacyAccessedAPITypes
+There has 3 keys in defalut config, defalut rule is ：To exclude retrieval a component that contains certain ‘github.com’ keywords
 ```
-"source.white.list": ["replace me with yourserver"], 
-"source.black.list": ["replace me such as github.com"],
+"source.white.list": [],
+"source.black.list": ["github.com"], 
 "api.template.url": "https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/NSPrivacyAccessedAPITypes.plist"
 ```
-After custom,you can set local config like this
+* source.white.list : a white list of source, it effective in command 'pod privacy install' or 'pod install --privacy', will search white list for NSPrivacyAccessedAPITypes.
+  * when the whitelist is an empty array, it means all components are whitelist(default config).
+  * when the whitelist is not empty, only it means only the components in the whitelist array are retrieved.
+* source.black.list : a black list of source, defalut is ‘github.com’, based on the whitelist, the components need to be excluded。 it effective in command 'pod privacy install' or 'pod install --privacy'. 
+* api.template.url : its required, a template for search NSPrivacyAccessedAPITypes
+
+For example, there has some components，and it‘s your local config
+```
+"source.white.list": ["https://github.com/ReactiveCocoa/ReactiveObjC.git","git.yourserver.com","git.otherserver.com"],
+"source.black.list": ["github.com","https://github.com/AFNetworking/AFNetworking.git"], 
+"api.template.url": "https://raw.githubusercontent.com/ymoyao/cocoapods-privacy/main/resources/NSPrivacyAccessedAPITypes.plist"
+```
+
+```
+https://github.com/AFNetworking/AFNetworking.git ❌ (it's in 'github.com' black list)
+https://github.com/ReactiveCocoa/ReactiveObjC.git ❌ (it's in 'github.com' black list, although also on the white list,but the blacklist priority is high when conflict)
+https://git.yourserver.com/xxx/xxxx.git ✅
+https://git.yourserver.com/mmm/mmm.git ✅
+https://git.otherserver.com/ssss/ssss.git ✅
+https://git.yourserver.com/AFNetworking/AFNetworking.git ✅
+```
+
+After custom,you just set local config like this
 ```
 $ pod privacy config /yourfilepath/config.json
 ```
+So，in a word,if you define both white and black lists ,final search range: white list minus black list, and empty white list means all!
 
-#### To Component
+
+### To Component
 ```
 $ pod privacy spec [podspec_file_path]
 ```
@@ -71,7 +92,7 @@ end
 
 
     
-#### To Project
+### To Project
 ```
 $ pod install --privacy
 or
