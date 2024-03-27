@@ -1,7 +1,10 @@
 # cocoapods-privacy
 
-Apple 2024 will review the App's privacy list in the spring, and any apps that don't submit a privacy list may be called back. For now, the privacy list is broken down by component, to facilitate the maintenance of component privacy, cocoapods-privacy is developed for management.
+Apple 2024 will review the App's privacy manifests in the spring, and any apps that don't submit a privacy list may be called back. For now, the privacy list is broken down by component, to facilitate the maintenance of component privacy, cocoapods-privacy is developed for management.
 [Click to view details on Apple](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files)
+
+# Introduction
+As name as,cocoapods-privacy is a plugin for privacy manifests, and focus on cocoapods!
 
 ## Installation
 ```
