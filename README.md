@@ -107,6 +107,8 @@ After command, a PrivacyInfo.xcprivacy will create to you project Resources if e
 
 ## Notice
 The plugin is focus on NSPrivacyAccessedAPITypes and automatically search and create workflow.
-you should manager NSPrivacyCollectedDataTypes by yourself！
-    
+you should manager NSPrivacyCollectedDataTypes by yourself！ 
+
+##
+Could you please consider giving our repository a star🌟🌟🌟? It would mean a lot to us and help our project gain more visibility. Thank you! 
 
