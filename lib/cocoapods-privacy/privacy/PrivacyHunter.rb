@@ -190,15 +190,122 @@ module PrivacyHunter
     # 文件是否包含内容
     def self.contains_apis?(file_path, apis)
       file_content = File.read(file_path)
+
+      #核心文件检查段落注释 /* */
+      file_extension = File.extname(file_path).downcase
+      need_check_paragraph_comment = ['.m', '.c', '.swift', '.mm', '.h', '.hap', '.hpp', '.cpp'].include?(file_extension)
+
+      if need_check_paragraph_comment 
+        # 计算段注释 /**/
+        apis_found = contains_apis_ignore_all_comment(file_content.lines,apis)
+      else
+        # 计算单独行注释 //
+        apis_found = contains_apis_ignore_line_comment(file_content.lines,apis)
+      end
+      apis_found
+    end
+
+    def self.contains_apis_ignore_line_comment(lines,apis) 
       apis_found = {}
-      apis.each do |keyword, value|
-        if file_content.include?(keyword)
-          apis_found[keyword] = value
+      # 初始化状态机，表示不在注释块内
+      in_block_comment_count = 0  
+      in_block_comment = false
+      lines.each do |line|
+        next if line.strip.empty? #忽略空行
+        next if line.strip.start_with?('//') #忽略单行
+
+        apis.each do |keyword, value|
+          if line.include?(keyword)
+            apis_found[keyword] = value
+          end
         end
       end
 
       apis_found
     end
+    
+    def self.contains_apis_ignore_all_comment(lines,apis) 
+      apis_found = {}
+
+      # 段注释和单行注释标志
+      in_block_comment = false
+      in_line_comment = false
+
+      # 是否可以触发注释标识，当为true 时可以触发 /*段注释 或者 //单行注释
+      can_trigger_comments_flag = true
+
+      # 统计计数器
+      count_comments = 0
+
+      lines.each do |line|
+        next if line.strip.empty? #忽略空行
+        next if line.strip.start_with?('//') && !in_block_comment  #忽略单行
+
+        chars = line.chars
+        index = 0
+        while index < chars.size
+          char = chars[index]
+
+          if char == '/'
+            if chars[index + 1] == '*'
+              # 检测到 /* 且can_trigger_comments_flag标识为true时，判定为进入 段注释
+              if can_trigger_comments_flag 
+                in_line_comment = false #重置行标识
+                in_block_comment = true #标记正在段注释中
+                can_trigger_comments_flag = false #回收头部重置标识
+              end
+
+              #段注释每次 遇到 /* 都累加1
+              if in_block_comment
+                count_comments += 1
+              end
+
+              #跳过当前 /* 两个字符
+              index += 2
+              next
+            # 检测到 can_trigger_comments_flag 为true,且 // 时，说明触发了段注释之后的单行注释 ==》 /**///abcd
+            elsif chars[index + 1] == '/' && can_trigger_comments_flag 
+                in_line_comment = true
+                in_block_comment = false
+                can_trigger_comments_flag = true
+                break            
+            end
+          # 检测到段注释的end 标识 */
+          elsif in_block_comment && char == '*' && chars[index + 1] == '/'
+
+            #段注释每次 遇到 */ 都累减1
+            count_comments -= 1
+
+            #当/* */ 配对时，说明当前段注释结束了
+            if count_comments == 0
+              in_line_comment = false
+              in_block_comment = false 
+              can_trigger_comments_flag = true
+            end
+
+            #跳过当前 */ 两个字符
+            index += 2
+            next
+          end
+
+          # 其他情况，前进一个字符
+          index += 1
+        end
+
+        if !in_block_comment && !in_line_comment
+          apis.each do |keyword, value|
+            if line.include?(keyword)
+              apis_found[keyword] = value
+            end
+          end
+        end
+
+        #每行结束时，重置行标识
+        in_line_comment = false
+      end
+      apis_found
+    end
+
 
     #搜索所有子文件夹
     def self.search_files(folder_paths, exclude_folders, apis)
