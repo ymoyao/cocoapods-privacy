@@ -187,9 +187,23 @@ module PrivacyHunter
       File.utime(File.atime(local_file_path), Time.parse(remote_file_time), local_file_path)
     end
 
+
+
+    #💡💡💡以下是 invalid byte sequence in UTF-8 错误复现 的数据代码
+    # File.write("/Users/xxx/.cache/cocoapods-privacy/privacy/file.txt", "vandflyver \xC5rhus \n
+    
+    # \n
+
+    # \\n
+
+    # vandflyver 
+    # \xC5rhus
+    # ")
     # 文件是否包含内容
     def self.contains_apis?(file_path, apis)
-      file_content = File.read(file_path)
+
+      #使用UTF-8 读取，无法读取的会被默认处理，修复 https://github.com/ymoyao/cocoapods-privacy/issues/7 
+      file_content = File.read(file_path, encoding: 'UTF-8', invalid: :replace, undef: :replace)
 
       #核心文件检查段落注释 /* */
       file_extension = File.extname(file_path).downcase
