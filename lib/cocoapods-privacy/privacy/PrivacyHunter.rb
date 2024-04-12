@@ -225,11 +225,13 @@ module PrivacyHunter
       in_block_comment_count = 0  
       in_block_comment = false
       lines.each do |line|
-        next if line.strip.empty? #忽略空行
-        next if line.strip.start_with?('//') #忽略单行
+
+        line_scrub = line.scrub("")
+        next if line_scrub.strip.empty? #忽略空行
+        next if line_scrub.strip.start_with?('//') #忽略单行
 
         apis.each do |keyword, value|
-          if line.include?(keyword)
+          if line_scrub.include?(keyword)
             apis_found[keyword] = value
           end
         end
@@ -252,10 +254,12 @@ module PrivacyHunter
       count_comments = 0
 
       lines.each do |line|
-        next if line.strip.empty? #忽略空行
-        next if line.strip.start_with?('//') && !in_block_comment  #忽略单行
 
-        chars = line.chars
+        line_scrub = line.scrub("")
+        next if line_scrub.strip.empty? #忽略空行
+        next if line_scrub.strip.start_with?('//') && !in_block_comment  #忽略单行
+
+        chars = line_scrub.chars
         index = 0
         while index < chars.size
           char = chars[index]
@@ -308,7 +312,7 @@ module PrivacyHunter
 
         if !in_block_comment && !in_line_comment
           apis.each do |keyword, value|
-            if line.include?(keyword)
+            if line_scrub.include?(keyword)
               apis_found[keyword] = value
             end
           end
