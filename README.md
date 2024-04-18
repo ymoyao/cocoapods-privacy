@@ -103,7 +103,13 @@ $ pod privacy install
 ```
 <img width="298" alt="截屏2024-02-02 10 59 59" src="https://github.com/ymoyao/cocoapods-privacy/assets/13619221/c6f10e36-0f62-497a-93d4-f8b336dc8df4">
 
-After command, a PrivacyInfo.xcprivacy will create to you project Resources if empty. and it will search component that configuration files allow and do not have their own privacy manifest file.
+After command, a PrivacyInfo.xcprivacy will create to you project Resources if empty. 
+
+Components that meet all of the following items will be processed.
+* do not have their own privacy manifest file components
+* in white list and not in black list components
+* source code components（binary components please deal with command `pod privacy spec` ）
+
 
 ## Notice
 The plugin is focus on NSPrivacyAccessedAPITypes and automatically search and create workflow.
