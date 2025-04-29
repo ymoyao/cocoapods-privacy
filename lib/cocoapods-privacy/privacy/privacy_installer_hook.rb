@@ -122,7 +122,6 @@ module Pod
         end
       }.compact
     
-      
       pod_folds += development_folds # 拼接本地调试和远端的pod目录 
       pod_folds += [formatter_search_fold(PrivacyUtils.project_code_fold)].compact # 拼接工程同名主目录
       pod_folds += custom_folds || [] # 拼接外部传入的自定义目录

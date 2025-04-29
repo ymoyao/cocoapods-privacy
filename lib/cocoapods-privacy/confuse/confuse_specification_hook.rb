@@ -1,5 +1,6 @@
 
 require 'cocoapods-core/specification/root_attribute_accessors'
+require 'cocoapods-privacy/command'
 
 module Pod
     # The Specification provides a DSL to describe a Pod. A pod is defined as a
@@ -10,16 +11,10 @@ module Pod
     #
     class Specification
 
-        # 是否含有隐私协议文件
-        def has_privacy
-            resource_bundle = attributes_hash['resource_bundles']
-            resource_bundle && resource_bundle.to_s.include?('PrivacyInfo.xcprivacy')
-        end
-
         # 是否为需要检索组件
-        def is_need_search_module
-            unless File.exist?(PrivacyUtils.cache_config_file)
-                raise Informative, "无配置文件，run `pod privacy config config_file` 进行配置"
+        def confuse_is_need_search_module
+            unless File.exist?(ConfuseUtils.cache_config_file)
+                raise Informative, "无配置文件，run `pod confuse config config_file` 进行配置"
             end
 
             #查找source(可能是subspec)
@@ -29,25 +24,20 @@ module Pod
             end
 
             # 如果指定了--all 参数，那么忽略黑名单白名单，全部检索
-            return true if Pod::Config.instance.is_all
+            return true if Pod::Config.instance.is_confuse_all
 
             # 判断域名白名单 和 黑名单，确保该组件是自己的组件，第三方sdk不做检索
-            config = Common::Config.instance          
+            config = Common::Config.instance     
 
             ## 规则：
-            ## 1、白名单/黑名单是通过组件podspec 中 source 字段的值来匹配，包含关键词即为命中，所有可以是git关键的域名，也可以是完整的git链接
-            ## 2、白名单：当白名单为空数组时：默认为全部组件都为白名单！！！； 当白名单不为空时，仅检索白名单数组内的组件
+            # 1、白名单/黑名单是通过组件podspec 中 source 字段的值来匹配，包含关键词即为命中，所有可以是git关键的域名，也可以是完整的git链接
+            # 2、白名单：当白名单为空数组时：默认为全部组件都为白名单！！！； 当白名单不为空时，仅检索白名单数组内的组件
             git_source_whitelisted = config.source_white_list.empty? ? true : config.source_white_list.any? { |item| git_source.include?(item) }
 
             ## 3、黑名单：在白名单基础上，需要排除的组件
             git_source_blacklisted = config.source_black_list.any? { |item| git_source.include?(item) }
             ## 4、最终检索的范围：白名单 - 黑名单
             git_source_whitelisted && !git_source_blacklisted
-        end
-
-        # 返回resource_bundles
-        def bb_resource_bundles
-          hash_value['resource_bundles']
         end
 
         private

@@ -123,7 +123,7 @@ module PrivacyHunter
         raise Pod::Informative, "无配置文件，run `pod privacy config config_file' 进行配置"
       end
   
-      template_url = Privacy::Config.instance.api_template_url
+      template_url = Common::Config.instance.api_template_url
       unless template_url && !template_url.empty?
         raise Pod::Informative, "配置文件中无 `api.template.url` 配置，请补全后再更新配置 `pod privacy config config_file` "
       end

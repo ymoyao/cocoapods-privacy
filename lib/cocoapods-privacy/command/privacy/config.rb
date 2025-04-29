@@ -36,7 +36,7 @@ module Pod
             
             def download_remote_config
               # 配置文件目录
-              cache_config_file = PrivacyUtils.cache_config_file
+              cache_config_file = Common::Config.instance.cache_config_file
 
               # 开始下载
               system("curl -o #{cache_config_file} #{@config}")
@@ -50,7 +50,7 @@ module Pod
             
             def copy_local_config
               # 配置文件目录
-              cache_config_file = PrivacyUtils.cache_config_file
+              cache_config_file = Common::Config.instance.cache_config_file
             
               # 复制本地文件
               FileUtils.cp(@config, cache_config_file)

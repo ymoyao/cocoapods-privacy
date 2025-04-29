@@ -1,4 +1,5 @@
 require 'digest'
+require 'cocoapods-privacy/command'
 
 module PrivacyUtils
 
@@ -49,31 +50,22 @@ module PrivacyUtils
     end
 
     def self.cache_privacy_fold
-      # 本地缓存目录
-      cache_directory = File.expand_path('~/.cache')
-      
-      # 目标文件夹路径
-      target_directory = File.join(cache_directory, 'cocoapods-privacy', 'privacy')
-
-      # 如果文件夹不存在，则创建
-      FileUtils.mkdir_p(target_directory) unless Dir.exist?(target_directory)
-
-      target_directory
+      Common::Config.instance.cache_privacy_fold
     end
 
     # etag 文件夹
     def self.cache_privacy_etag_fold
-      File.join(cache_privacy_fold,'etag')
+      Common::Config.instance.cache_privacy_etag_fold
     end
     
     # config.json 文件
     def self.cache_config_file
-      config_file = File.join(cache_privacy_fold, 'config.json')
+      Common::Config.instance.cache_config_file
     end
 
     # config.json 文件
     def self.cache_log_file
-      config_file = File.join(cache_privacy_fold, 'privacy.log')
+      Common::Config.instance.cache_log_file
     end
 
     # 创建默认隐私协议文件
