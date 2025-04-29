@@ -185,7 +185,6 @@ module Confuse
                 # # 将注解内容按逗号分割功能，并去重
                   commands = match.first.split(',').map(&:strip)
                   commands.map do |commandInfo| 
-                    puts commandInfo
                     commandKeyAndValue = commandInfo.split(':')
                     commandKey =  commandKeyAndValue.first
                     commandValue =  commandKeyAndValue.last
@@ -193,22 +192,24 @@ module Confuse
                       swift_extension = commandValue
                     end
                   end
-
-                  # new_parts = encrypted_api(apis)
-
-                  # apis.each_with_index do |seg, index| 
-                  #   apis_define_map[seg.strip] = new_parts[index]
-                  # end
-
-                  # puts "__attribute__ = #{match}"
               end
 
               # 查找并处理注解：__attribute__((annotate("xxx")))
-              # @regex = /^[+-]\s*\(\s*([^$]+)\s*\**\s*\)\s*(.+)/
-              line_scrub.scan(/(^[-+]\s*\(.*?\)\s*(\w+)\s*([\w\s]+))\s*__attribute__\(\(annotate\(/) do |match|
+              # ^	匹配行首	+ (BOOL)
+              # [-+]	匹配 + 或 - 符号（ObjC 方法声明开头）	+
+              # \s*	匹配 0 个或多个空白字符	空格
+              # \([\w\s\*]+\)	匹配一对圆括号里的类型声明，含字母、空格、* 指针符	(BOOL) / (NSString *)
+              # \s*	匹配 0 个或多个空白字符	空格
+              # (\w+)	捕获组 1：匹配方法名（只匹配到冒号前）	uxxx_BB_Confuse_BBMUserCenter
+              # \s*	匹配 0 个或多个空白字符	空格
+              # (.*?)	捕获组 2：匹配“方法声明后到 __attribute__ 前的所有内容”，但用非贪婪方式，遇到 __attribute__ 就停	:(NSString *)name tip:(BOOL)ret
+              # \s*__attribute__\(\(annotate\(	匹配固定字符串 __att
+              regular = ConfuseUtils.oc_func_regular(line_scrub,false)
+              if regular
+                regular = /#{regular}\s*__attribute__\(\(annotate\(/
+                line_scrub.scan(regular) do |match|
                   apis = [match.second]
                   new_parts = encrypted_api(apis)
-
                   funcStr = match.first.sub(';','').sub(/__attribute__\(\(annotate\(["][^"]*["]\)\)\).*/, '')
                   swift_method_declaration,params = ObjCMethodAPIConverter.convert(funcStr)
                   if !swift_extension.empty? && swift_method_declaration && !swift_method_declaration.empty?
@@ -219,6 +220,7 @@ module Confuse
                   apis.each_with_index do |seg, index| 
                     apis_define_map[seg.strip] = new_parts[index]
                   end
+                end
               end
 
               ###----- 处理swift 类 ------
@@ -281,10 +283,17 @@ module Confuse
               if line_scrub.strip.start_with?(confuse_func_pre_literal)
                 #BBConfuseMixObjc("#selector(abcdefg(in:sencName:))"); asdasagwtrqwetr
       
-
                 #selector(.*?)\)
                 #解析带参数的
-                # line_scrub.gsub!(/#{confuse_func_pre_literal}\(#selector\((.*?)\)\)\);(?:.*?@objc\((\S+)\))?(?:.*?@objc\s*)?/) do |match|
+                # | 部分 | 作用 | 举例 |
+                # |:-------------------------|:------------------------------------------------|:---------------------------------|
+                # | `#{confuse_func_pre_literal}\(` | 匹配你之前定义好的前缀字串（比如 `confuseMethod(`）和一个 `(` | `confuseMethod(` |
+                # | `(?:#selector\((.*?)\)\))?` | **非捕获组**，匹配 `#selector(XXX)`，括号内的 `XXX` 放进 `捕获组1` | `#selector(someMethod)` |
+                # | `(?:"([^"]*:[^"]*)")?` | **可选**，匹配 `:"xxx:xxx"` 格式的字符串，放进 `捕获组2` | `"abc:def"` |
+                # | `\);` | 匹配 `);` |
+                # | `(?:.*?@objc\((\S+)\))?` | **非捕获组**，可选，匹配 `@objc(XXX)`，把 `XXX` 放进 `捕获组3` | `@objc(mySelector)` |
+                # | `(?:.*?@objc\s*)?` | **非捕获组**，可选，匹配剩下一个 `@objc` 没括号的情况 | `@objc` |
+
                 line_scrub.gsub!(/#{confuse_func_pre_literal}\((?:#selector\((.*?)\)\))?(?:"([^"]*:[^"]*)")?\);(?:.*?@objc\((\S+)\))?(?:.*?@objc\s*)?/) do |match|
                   modified = true
                   selector_match = $1
@@ -302,9 +311,15 @@ module Confuse
                 end
 
                 #解析不带参数的
-                # line_scrub.gsub!(/#{confuse_func_pre_literal}\(#selector\(([^\(]+)\)\);(?:.*?@objc\((\S+)\))?(?:.*?@objc\s*)?/) do |match|
+                # | 部分 | 作用 | 举例 |
+                # |:-------------------------------|:--------------------------------------------------|:--------------------------|
+                # | `#{confuse_func_pre_literal}\(` | 匹配你的宏/方法名前缀 + `(`，比如 `confuseMethod(` | `confuseMethod(` |
+                # | `(?:#selector\(([^\(]+)\))?` | **非捕获组**，可选。匹配 `#selector(...)` 里的内容，放进 `捕获组1`，这里用 `([^\(]+)` 匹配**非左括号字符**，直到遇到 `)` | `#selector(doSomething)` → `doSomething` |
+                # | `(?:"([^":]+)")?` | **可选**，匹配 `"xxx"`，但里面不能有 `:` 或 `"`，放进 `捕获组2`。注意这版里不再要求冒号存在，单纯匹配一段字符串 | `"helloWorld"` |
+                # | `\);` | 匹配 `);` 结尾 |
+                # | `(?:.*?@objc\((\S+)\))?` | **非捕获组**，可选。匹配 `@objc(XXX)`，把 `XXX` 放进 `捕获组3`。`(\S+)` 匹配非空白连续字符 | `@objc(doSomethingElse)` |
+                # | `(?:.*?@objc\s*)?` | **非捕获组**，可选。匹配剩下没括号的 `@objc` | `@objc` |
                 line_scrub.gsub!(/#{confuse_func_pre_literal}\((?:#selector\(([^\(]+)\))?(?:"([^":]+)")?\);(?:.*?@objc\((\S+)\))?(?:.*?@objc\s*)?/) do |match|
-                # line_scrub.gsub!(/#{confuse_func_pre_literal}\((#selector\((.*?)\)|"([^"]+)")\);(?:.*?@objc\((\S+)\))?(?:.*?@objc\s*)?/) do |match|
                   modified = true
                   selector_match = $1
                   str_match = $2

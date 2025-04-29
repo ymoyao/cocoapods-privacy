@@ -3,7 +3,9 @@ module Confuse
   class ObjCMethodAPIConverter
       # Regular expression to match Objective-C method declarations
       # def initialize
-        @regex = /^[+-]\s*\(\s*([\w\s*]+)\s*\**\s*\)\s*(.+)/
+  
+        # @blockRegex = /#{ConfuseUtils.oc_block_regular}/
+        # @regex = /#{ConfuseUtils.noneBlock}/
         @param_regex = /(\w+):\s*\(([^:]+)\)(\w+)/x
       # end
     
@@ -16,15 +18,17 @@ module Confuse
         is_static = objc_method_declaration.start_with?("+")
         preFuncDes = is_static ? "static " : ""
     
-    
+        regular = ConfuseUtils.oc_func_regular(objc_method_declaration,true)
         # Match the method declaration using the regex
-        matches = objc_method_declaration.match(@regex)
+        matches = objc_method_declaration.match(regular)
         return nil,nil unless matches
 
         # Extract components from the matched regex groups
-        return_type = matches[1] || "Void"
-        param_section = matches[2] || ""
-        method_name = matches[2]
+        return_type = matches[2] || "Void"
+        method_name = matches[3]
+        param_section = (matches[3] + (matches[4] || "")) || ""
+        # puts "matches = #{matches}"
+        # puts "objc_method_declaration = #{objc_method_declaration}"
         # puts  "return_type = #{return_type}"
         # puts  "param_section = #{param_section}"
         # puts "method_name = #{method_name}"
@@ -35,7 +39,6 @@ module Confuse
         # Extract parameters from the method declaration
         params = extract_parameters(param_section)
         method_name = extract_methodName(param_section,method_name)
-        # puts "params = #{params}"
     
         # Construct the Swift method declaration
         swift_method_declaration = "#{preFuncDes}public func #{method_name}(#{params.join(', ')})"
@@ -163,7 +166,6 @@ module Confuse
       #  puts convert_block_to_closure('NSString *(^)(NSInteger)')  # 输出: (Int) -> String?
       #  puts convert_block_to_closure('void (^)(NSInteger, BOOL)') # 输出: (Int, Bool) -> Void
       def self.convert_block_to_closure(block_signature)
-
         # 正则表达式解释：
         # ^([\w\s\*]+)\s*\(\^\)\s*(?:\((.*?)\))?\s*$
         # 1. ([\w\s\*]+): 捕获返回值类型（如 void、NSInteger、NSString * 等）。

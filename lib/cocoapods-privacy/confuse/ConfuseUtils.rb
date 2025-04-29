@@ -18,7 +18,6 @@ module ConfuseUtils
     # xcode工程地址
     def self.project_path
       matching_files = Dir[File.join(Pathname.pwd, '*.xcodeproj')].uniq
-      puts "matching_files = #{matching_files}"
       matching_files.first
     end
 
@@ -102,6 +101,66 @@ module ConfuseUtils
   def self.add_spaces_to_string(str, num_spaces)
     spaces = ' ' * num_spaces
     "#{spaces}#{str}"
+  end
+
+  def self.oc_func_regular(str,isCapture = false)
+    if str =~ /^[-+]\s*\(.*?\)/ #为函数
+      num = match_nesting_parentheses_first(str)
+      if isBlockReturn(str) === true #block 返回参数函数
+        if num > 1
+          regular = oc_block_regular(num - 1,isCapture)
+          regular = /(^[-+]#{regular}(\w+)\s*(.+))/
+          return regular
+        end
+      else
+        regular = oc_normal_regular(num - 1,isCapture)
+        regular = /(^[-+]#{regular}(\w+)\s*(.+))/
+        return regular
+      end
+    end
+    return nil
+  end
+
+  def self.match_nesting_parentheses_first(str)
+    stack = []
+    count = 0
+    
+    str.each_char.with_index do |char, idx|
+      if char == '('
+        stack.push(idx)  # 记录左括号的位置
+      elsif char == ')'
+        count += 1
+        stack.pop  # 弹出左括号位置
+        if stack.empty?
+          return count
+        end
+      end
+    end
+    0  # 如果没有匹配到指定数量的括号对，返回 nil
+  end
+
+  def self.isBlockReturn(str)
+    if str =~ /^[-+]\s*\(([^)]*\^.+?)\)/      #block 返回参数函数
+        return true
+    else
+        return false
+    end
+  end
+
+  def self.oc_block_regular(num,isCapture = false)
+    if isCapture == false
+      "\\s*\\((?:[^\\)]+\\)){#{num}}.*?\\)\\s*"
+    else
+      "\\s*\\(((?:[^\\)]+\\)){#{num}}.*?)\\)\\s*"
+    end
+  end
+
+  def self.oc_normal_regular(num,isCapture = false)
+    if isCapture == false
+      "\\s*\\(.*?\\)\\s*"
+    else
+      "\\s*\\((.*?)\\)\\s*"
+    end
   end
 
 end
