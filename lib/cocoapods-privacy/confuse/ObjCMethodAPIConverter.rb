@@ -153,7 +153,7 @@ module Confuse
               break
           end
         end
-        method_name
+        method_name.strip
       end
     
       
