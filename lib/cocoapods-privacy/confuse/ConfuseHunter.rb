@@ -45,7 +45,7 @@ module Confuse
           func = "public extension #{key} {\n" + values.map { |value|
             value.split("\n").map { |line| "  #{line}" }.join("\n")  # 每行前加四个空格
           }.join("\n\n") + "\n}"
-        }.join("\n")
+        }.join("\n\n")
         confuse_func_content = funcs
         puts "混淆(扩展):\n 文件:#{swift_confuse_file_path}\n 内容👇:\n#{confuse_func_content}"
 
@@ -104,7 +104,7 @@ module Confuse
         swift_extension_funcBody_map = {}
 
         #oc 暴露给swift 的扩展名称
-        swift_extension = ""
+        swift_extension = []
 
         # 段注释和单行注释标志
         in_block_comment = false
@@ -177,24 +177,61 @@ module Confuse
           if !in_block_comment && !in_line_comment
 
               ###----- 处理oc ------
-              # 查找并处理注解：__attribute__((annotate("BB_?Confuse:xxx")))
-              #.*?: 匹配任意字符（包括冒号），但它会尽量少匹配直到遇到冒号为止。
-              #.*? 匹配冒号后面的一些字符（任意字符，直到遇到下一个双引号）。
-              #这样可以确保匹配的字符串中至少包含一个冒号。
-              line_scrub.scan(/__attribute__\(\(annotate\("(.*?:.*?)"\)\)\)/) do |match|
-                # # 将注解内容按逗号分割功能，并去重
-                  commands = match.first.split(',').map(&:strip)
-                  commands.map do |commandInfo| 
-                    commandKeyAndValue = commandInfo.split(':')
-                    commandKey =  commandKeyAndValue.first
-                    commandValue =  commandKeyAndValue.last
-                    if commandKey && commandKey =~ /BB_?Confuse/
-                      swift_extension = commandValue
-                    end
+              #### 检测BBConfuseOCToSwift("xxxx") 用来处理oc函数混淆暴露给swift
+              line_scrub.scan(/^BBConfuseOCToSwift\(\"(.*?)\"\)/) do |match|
+                  literals = match.first.split(',').map(&:strip)
+                  unless literals.empty?
+                    swift_extension = literals
                   end
               end
 
-              # 查找并处理注解：__attribute__((annotate("xxx")))
+              ### 检测BBConfuseOCClass("xxxx") 用来处理oc 类混淆
+              line_scrub.gsub!(/^BBConfuseOCClass\(\"(.*?)\"\)/) do |match|
+                modified = true #开启编辑
+                original_api = $1
+                new_api = encrypted_api([original_api]).first
+                puts "asasd = #{new_api} "
+                "BBConfuseOCClass(\"#{new_api}\")"
+              end
+
+
+              #### 检测BBConfuseOCClass("xxxx") 用来处理oc 类混淆
+              # line_scrub.scan(/^BBConfuseOCClass\(\"(.*?)\"\)/) do |match|
+              #   puts "match = #{match}"
+              #     apis = [match.first]
+              #      puts "apis = #{apis}"
+              #     new_parts = encrypted_api(apis)
+              #     apis.each_with_index do |seg, index| 
+              #       apis_define_map[seg.strip] = new_parts[index]
+              #     end
+              # end
+
+              # @property (nonatomic, assign) BOOL coldLaunch BBConfuseOCProperty;
+              #### 检测@protperty(xxxx)mmm *nnn BBConfuseOCProperty 用来处理oc 属性混淆
+              line_scrub.scan(/^@property\s*\((.*?)\)\s*(\w+)\s*([\*&]?)\s*(\w+)\s*BBConfuseOCProperty/) do |match|
+                puts "BBConfuseOCProperty = #{match}"
+                is_nullable = match.first.include?("nullable") || match.first.include?("weak")
+                return_type = match.second + match[2]
+                property_name = match[3]
+                apis = [property_name]
+                new_parts = encrypted_api(apis)
+         
+                if !swift_extension.empty? && return_type && !return_type.empty?
+                  swift_return_type = ConfuseUtils.convert_oc_type_to_swift(return_type)
+                  swift_property_body = SwiftCallAssembly.assemblyProperty(property_name,new_parts.first,swift_return_type,is_nullable)
+
+                  swift_extension.each do |extension|
+                    swift_extension_funcBody_map[extension] ||= []
+                    swift_extension_funcBody_map[extension].push(swift_property_body)
+                  end
+                end
+
+                apis.each_with_index do |seg, index| 
+                    apis_define_map[seg.strip] = new_parts[index]
+                end
+              end
+
+              #### BBConfuseOCFunc 用来处理oc 函数混淆
               # ^	匹配行首	+ (BOOL)
               # [-+]	匹配 + 或 - 符号（ObjC 方法声明开头）	+
               # \s*	匹配 0 个或多个空白字符	空格
@@ -206,17 +243,22 @@ module Confuse
               # \s*__attribute__\(\(annotate\(	匹配固定字符串 __att
               regular = ConfuseUtils.oc_func_regular(line_scrub,false)
               if regular
-                regular = /#{regular}\s*__attribute__\(\(annotate\(/
+                regular = /#{regular}\s*BBConfuseOCFunc/
                 line_scrub.scan(regular) do |match|
                   apis = [match.second]
                   new_parts = encrypted_api(apis)
-                  funcStr = match.first.sub(';','').sub(/__attribute__\(\(annotate\(["][^"]*["]\)\)\).*/, '')
-                  swift_method_declaration,params = ObjCMethodAPIConverter.convert(funcStr)
+                  funcStr = match.first.sub(';','').sub(/BBConfuseOCFunc.*/, '')
+                  is_nullable, return_type, swift_method_declaration ,params = ObjCMethodAPIConverter.convert(funcStr)
+
                   if !swift_extension.empty? && swift_method_declaration && !swift_method_declaration.empty?
-                    swift_func_body = SwiftCallAssembly.assembly(new_parts.first,swift_method_declaration,params)
-                    swift_extension_funcBody_map[swift_extension] ||= []
-                    swift_extension_funcBody_map[swift_extension].push(swift_func_body)
+                    swift_func_body = SwiftCallAssembly.assembly(new_parts.first, swift_method_declaration, params, is_nullable, return_type)
+
+                    swift_extension.each do |extension|
+                      swift_extension_funcBody_map[extension] ||= []
+                      swift_extension_funcBody_map[extension].push(swift_func_body)
+                    end
                   end
+
                   apis.each_with_index do |seg, index| 
                     apis_define_map[seg.strip] = new_parts[index]
                   end
@@ -480,7 +522,28 @@ module Confuse
             end
           end
         end
+
+        # 用 apis_define_map 中对应的 value，更新 swift_extension_funcBody_map 中相同 key 的 key, 避免AClass同时定义了类混淆且暴露给swift, swift 扩展使用原先未混淆的类的问题
+        # update_func_body_map_keys!($apis_define_map, $swift_extension_funcBody_map)
+
         return $apis_define_map, $swift_extension_funcBody_map
+      end
+
+      # 用 apis_define_map 中对应的 value，更新 swift_extension_funcBody_map 中相同 key 的 key, 避免AClass同时定义了类混淆且暴露给swift, swift 扩展使用原先未混淆的类的问题
+      def update_func_body_map_keys!(apis_define_map, swift_extension_funcBody_map)
+        new_map = {}
+
+        swift_extension_funcBody_map.each do |key, value|
+          if apis_define_map.has_key?(key)
+            confuse_value = apis_define_map[key]
+            new_key = confuse_value
+            new_map[new_key] = value
+          else
+            new_map[key] = value
+          end
+        end
+
+        swift_extension_funcBody_map.replace(new_map)
       end
 
 

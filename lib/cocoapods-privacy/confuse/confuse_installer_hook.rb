@@ -69,6 +69,11 @@ module Pod
             project = Xcodeproj::Project.open(File.basename(project_path))
             target = project.targets.first
             plist_path = target.resolved_build_setting('INFOPLIST_FILE', resolve_against: target).first.last
+
+            if project_path.nil? || plist_path.nil? || project_path.empty? || plist_path.empty?
+              return
+            end
+
             plist_path = File.join(File.dirname(project_path), plist_path)
             plist = Plist.parse_xml(plist_path)
             puts plist_path
@@ -76,6 +81,7 @@ module Pod
             unless plist.nil?
               is_confuse = plist['ISConfuse']
               if is_confuse.nil?
+                puts "None key for ISConfuse"
                 # 没有 --confuse 命令和 Info 配置, 不处理
               elsif is_confuse == true
                 enable_confuse()
