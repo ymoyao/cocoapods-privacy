@@ -4,6 +4,7 @@ require 'cocoapods-core/specification/dsl/attribute'
 require 'xcodeproj'
 require 'plist'
 require 'yaml'
+require 'base64'
 
 module ConfuseModule
 
@@ -22,17 +23,18 @@ module ConfuseModule
       # puts "exclude_files = #{exclude_files}"
       # puts "confuse_file_path = #{confuse_file_path}"
       podspec = Pod::Specification.from_file(podspec_file_path)
-      version = podspec.version.to_s
-      version = version.gsub('.', '_')  # Replace dots with underscores
+      version =  podspec.version.to_s.gsub('.', '_')  # Replace dots with underscores
+      name = Base64.encode64(podspec.name.to_s)
+      mix_version = version + "_" + name
 
-      hunter = Confuse::Hunter.new(version)
+      hunter = Confuse::Hunter.new(mix_version)
       apis_define_map, swift_extension_funcBody_map = hunter.search_need_confuse_apis(source_files,exclude_files)  
       # puts "swift_extension_funcBody_map = #{swift_extension_funcBody_map}"
 
       oc_confuse_file_path = "#{confuse_file_path}.h"
       swift_confuse_file_path = "#{confuse_file_path}.swift"
-      hunter.insert_encrypted_apis_to_confuse_header(apis_define_map,oc_confuse_file_path,version)
-      hunter.insert_encrypted_apis_to_confuse_swift(swift_extension_funcBody_map,swift_confuse_file_path,version)
+      hunter.insert_encrypted_apis_to_confuse_header(apis_define_map,oc_confuse_file_path)
+      hunter.insert_encrypted_apis_to_confuse_swift(swift_extension_funcBody_map,swift_confuse_file_path)
     end
     puts "👆👆👆👆👆👆 End analysis component confuse 👆👆👆👆👆👆"
   end

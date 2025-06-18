@@ -20,7 +20,7 @@ module Confuse
         return apis_define_map, swift_extension_funcBody_map
       end
 
-      def insert_encrypted_apis_to_confuse_header(apis_define_map,confuse_header_path,flag = "")
+      def insert_encrypted_apis_to_confuse_header(apis_define_map,confuse_header_path)
           # 存储已生成的随机字符串以确保唯一性
           generated_strings = {}
 
@@ -36,7 +36,7 @@ module Confuse
           File.write(confuse_header_path, confuse_header_content)
       end
 
-      def insert_encrypted_apis_to_confuse_swift(swift_extension_funcBody_map,swift_confuse_file_path,flag = "")
+      def insert_encrypted_apis_to_confuse_swift(swift_extension_funcBody_map,swift_confuse_file_path)
         # 存储已生成的随机字符串以确保唯一性
         generated_strings = {}
 
