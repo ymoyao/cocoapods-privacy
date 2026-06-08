@@ -66,6 +66,17 @@ module Pod
           else
             #读取工程plistinfo 中的ISConfuse 配置
             project_path = ConfuseUtils.project_path()
+            if project_path.nil? || project_path.empty?
+              puts "[Confuse] project_path is nil or empty, skip confuse check"
+              return
+            end
+
+            project_file = File.basename(project_path)
+            unless File.exist?(project_file)
+              puts "[Confuse] project file not found: #{project_file}, skip confuse check"
+              return
+            end
+            
             project = Xcodeproj::Project.open(File.basename(project_path))
             target = project.targets.first
             plist_path = target.resolved_build_setting('INFOPLIST_FILE', resolve_against: target).first.last
